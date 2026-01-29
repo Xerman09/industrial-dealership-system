@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NavUser } from "../_components/nav-user";
-import AssetManagementModule from "@/modules/financial-management/asset-management/AssetManagementModulePage";
+import AssetManagementModulePage from "@/modules/financial-management/asset-management/AssetManagementModulePage";
 
 // ✅ Wire the module you asked for
 //  import { DisbursementModule } from "@/modules/financial-management/treasury/disbursement"
@@ -19,7 +19,7 @@ import AssetManagementModule from "@/modules/financial-management/asset-manageme
 const headerUser = {
   name: "Jake Dave M. De Guzman",
   email: "jakedavedeguzman@vertex.com",
-  avatar: "/avatars/shadcn.jpg",
+  // avatar: "/avatars/shadcn.jpg",
 };
 
 export default function Page() {
@@ -27,7 +27,7 @@ export default function Page() {
     <div className="flex h-full min-h-0 flex-col">
       <header
         className="
-          sticky top-2 z-50 relative
+          sticky top-2 z-50
           flex h-16 shrink-0 items-center justify-between
           border-b bg-background shadow-sm
           before:content-[''] before:absolute before:inset-x-0 before:-top-2 before:h-2 before:bg-background
@@ -58,7 +58,7 @@ export default function Page() {
         </div>
       </header>
 
-      <AssetManagementModule />
+      <AssetManagementModulePage />
 
       <ScrollArea className="min-h-0 flex-1">
         <div className="p-4">{/*<DisbursementModule />*/}</div>
