@@ -1,72 +1,85 @@
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/fm/asset-management/route.ts
+import { NextResponse } from "next/server";
 
-const DIRECTUS_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const DIRECTUS_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
-const headers = {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${DIRECTUS_TOKEN}`,
-};
+const DIRECTUS_URL = "http://goatedcodoer:8056";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const type = searchParams.get("type");
-
+export async function GET(req: Request) {
   try {
-    let endpoint = "";
-    if (type === "departments") endpoint = `${DIRECTUS_URL}/items/department`;
-    else if (type === "users") endpoint = `${DIRECTUS_URL}/items/user`;
-    else {
-      endpoint = `${DIRECTUS_URL}/items/assets_and_equipment?fields=*,item_id.item_name,employee.user_fname,employee.user_lname,department.department_description`;
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type");
+
+    if (type === "departments") {
+      const res = await fetch(`${DIRECTUS_URL}/items/department`);
+      return NextResponse.json(await res.json());
     }
 
-    const res = await fetch(endpoint, { headers, cache: "no-store" });
-    return NextResponse.json(await res.json());
-  } catch (error) {
-    return NextResponse.json({ error: "Fetch error" }, { status: 500 });
+    if (type === "users") {
+      const res = await fetch(`${DIRECTUS_URL}/items/user?limit=-1`);
+      return NextResponse.json(await res.json());
+    }
+
+    // This forces Directus to expand relationship IDs into full objects
+    // src/app/api/fm/asset-management/route.ts
+    const res = await fetch(
+      `${DIRECTUS_URL}/items/assets_and_equipment?fields=*,item_id.item_name`,
+      { cache: "no-store" },
+    );
+
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const typeRes = await fetch(`${DIRECTUS_URL}/items/item_type`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ type_name: body.item_type }),
-    }).then((r) => r.json());
+    // STEP 1: Create the entry in the 'items' table
+    const itemPayload = {
+      item_name: body.item_name,
+      // Fallback to default IDs if input isn't a number
+      item_type: isNaN(Number(body.item_type)) ? 2 : Number(body.item_type),
+      item_classification: isNaN(Number(body.item_classification))
+        ? 1
+        : Number(body.item_classification),
+    };
 
     const itemRes = await fetch(`${DIRECTUS_URL}/items/items`, {
       method: "POST",
-      headers,
-      body: JSON.stringify({
-        item_name: body.item_name,
-        item_type: typeRes.data.id,
-      }),
-    }).then((r) => r.json());
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(itemPayload),
+    });
 
-    const finalAsset = await fetch(
-      `${DIRECTUS_URL}/items/assets_and_equipment`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          barcode: body.barcode,
-          condition: body.condition,
-          quantity: Number(body.quantity),
-          cost_per_item: Number(body.cost_per_item),
-          total: Number(body.quantity) * Number(body.cost_per_item),
-          item_id: itemRes.data.id,
-          department: Number(body.department),
-          employee: body.employee ? Number(body.employee) : null,
-          encoder: Number(body.encoder) || 1,
-          date_acquired: body.date_acquired,
-        }),
-      },
-    ).then((r) => r.json());
+    if (!itemRes.ok) throw new Error("Item table insert failed");
+    const itemData = await itemRes.json();
+    const newItemId = itemData.data.id;
 
-    return NextResponse.json(finalAsset);
-  } catch (error) {
-    return NextResponse.json({ error: "Save error" }, { status: 500 });
+    // STEP 2: Create the Asset and link it to the Item ID
+    const assetPayload = {
+      item_id: newItemId,
+      barcode: body.barcode || null,
+      condition: body.condition,
+      cost_per_item: Number(body.cost_per_item),
+      date_acquired: body.date_acquired,
+      department: Number(body.department),
+      employee: body.employee ? Number(body.employee) : null,
+      encoder: 81, // Based on your debug logs
+      quantity: Number(body.quantity),
+      rfid_code: body.rfid_code || null,
+      total: Number(body.cost_per_item) * Number(body.quantity),
+      life_span: Number(body.life_span),
+    };
+
+    const assetRes = await fetch(`${DIRECTUS_URL}/items/assets_and_equipment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(assetPayload),
+    });
+
+    return NextResponse.json(await assetRes.json());
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

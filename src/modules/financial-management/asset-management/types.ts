@@ -39,10 +39,12 @@ export interface AssetTableData {
   cost_per_item: number;
   total: number;
   date_acquired: string;
-  // These are objects because of the 'fields=*.*' query in route.ts
   item_id?: {
     item_name: string;
   };
   department?: Department;
-  employee?: User;
+  employee?: {
+    user_fname: string;
+    user_lname: string;
+  };
 }

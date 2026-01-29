@@ -8,8 +8,32 @@ export const columns: ColumnDef<AssetTableData>[] = [
   {
     id: "item_name",
     header: "Item Name",
-    // Reaching into the nested item_id object from Directus
-    accessorFn: (row) => row.item_id?.item_name || "N/A",
+    accessorFn: (row) => {
+      // Logic: If item_id is an object, get the name.
+      // If it's just a number, return the number as a string for debugging.
+      const item = row.item_id;
+      if (typeof item === "object" && item !== null) {
+        return item.item_name;
+      }
+      return item ? `ID: ${item}` : "N/A";
+    },
+    cell: ({ row }) => {
+      const item = row.original.item_id;
+      const isObject = typeof item === "object" && item !== null;
+
+      return (
+        <div className="flex flex-col">
+          <span className="font-medium">
+            {isObject ? item.item_name : "N/A"}
+          </span>
+          {!isObject && item && (
+            <span className="text-[10px] text-orange-500 font-mono">
+              Link active (ID: {item}) - Check Permissions
+            </span>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "barcode",
@@ -42,10 +66,13 @@ export const columns: ColumnDef<AssetTableData>[] = [
   {
     id: "assigned_to",
     header: "Assigned To",
-    // Combining names from the nested employee object
     accessorFn: (row) => {
       const emp = row.employee;
-      return emp ? `${emp.user_fname} ${emp.user_lname}` : "Unassigned";
+      // Handle the case where employee might be a number (ID) instead of an object
+      if (emp && typeof emp === "object") {
+        return `${emp.user_fname} ${emp.user_lname}`;
+      }
+      return "Unassigned";
     },
   },
 ];
