@@ -6,29 +6,16 @@ import { AssetTableData } from "../../types";
 
 export const columns: ColumnDef<AssetTableData>[] = [
   {
-    id: "item_name",
+    accessorKey: "item_name", // Directly use the key from your merged API response
     header: "Item Name",
-    accessorFn: (row) => {
-      // Logic: If item_id is an object, get the name.
-      // If it's just a number, return the number as a string for debugging.
-      const item = row.item_id;
-      if (typeof item === "object" && item !== null) {
-        return item.item_name;
-      }
-      return item ? `ID: ${item}` : "N/A";
-    },
     cell: ({ row }) => {
-      const item = row.original.item_id;
-      const isObject = typeof item === "object" && item !== null;
-
+      const name = row.original.item_name;
       return (
         <div className="flex flex-col">
-          <span className="font-medium">
-            {isObject ? item.item_name : "N/A"}
-          </span>
-          {!isObject && item && (
+          <span className="font-medium">{name || "N/A"}</span>
+          {!name && (
             <span className="text-[10px] text-orange-500 font-mono">
-              Link active (ID: {item}) - Check Permissions
+              Missing Item Link
             </span>
           )}
         </div>
@@ -68,7 +55,6 @@ export const columns: ColumnDef<AssetTableData>[] = [
     header: "Assigned To",
     accessorFn: (row) => {
       const emp = row.employee;
-      // Handle the case where employee might be a number (ID) instead of an object
       if (emp && typeof emp === "object") {
         return `${emp.user_fname} ${emp.user_lname}`;
       }

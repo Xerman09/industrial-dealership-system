@@ -22,10 +22,7 @@ export default function AssetManagementModulePage() {
       const response = await fetch("/api/fm/asset-management");
       const result = await response.json();
 
-      // Directus unwrapping
-      if (result && result.data) {
-        setData(result.data);
-      }
+      setData(result);
     } catch (error) {
       toast.error("Failed to load assets.");
     } finally {

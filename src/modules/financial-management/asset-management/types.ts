@@ -39,12 +39,14 @@ export interface AssetTableData {
   cost_per_item: number;
   total: number;
   date_acquired: string;
-  item_id?: {
-    item_name: string;
-  };
-  department?: Department;
-  employee?: {
-    user_fname: string;
-    user_lname: string;
-  };
+  item_name: string | null;
+  item_type: string | null;
+  item_classification: string | null;
+  department?: number;
+  employee?:
+    | {
+        user_fname: string;
+        user_lname: string;
+      }
+    | number;
 }

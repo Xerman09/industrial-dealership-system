@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -17,170 +21,104 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-import { assetFormSchema, AssetFormValues, Department, User } from "../types";
-import { assetService } from "../services/assetService";
+interface AddAssetModalProps {
+  onSuccess: () => void;
+}
 
-export default function AddAssetModal() {
+export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
 
-  const form = useForm<AssetFormValues>({
-    resolver: zodResolver(assetFormSchema),
+  const form = useForm({
     defaultValues: {
       item_name: "",
-      item_type: "",
-      item_classification: "",
       barcode: "",
       rfid_code: "",
       condition: "Good",
-      quantity: 1,
-      cost_per_item: 0,
-      life_span: 12,
-      date_acquired: new Date(),
-      department: "" as any,
-      employee: "" as any,
+      cost_per_item: "",
+      quantity: "1",
+      department: "",
+      life_span: "12",
+      date_acquired: new Date().toISOString().split("T")[0],
     },
   });
 
+  // Fetch departments for the dropdown
   useEffect(() => {
     if (open) {
-      assetService.getDepartments().then((res) => setDepartments(res.data));
-      assetService.getUsers().then((res) => setUsers(res.data));
+      const fetchDeps = async () => {
+        try {
+          const res = await fetch("/api/fm/asset-management?type=departments");
+          const data = await res.json();
+          setDepartments(Array.isArray(data) ? data : []);
+        } catch (error) {
+          console.error("Failed to load departments", error);
+        }
+      };
+      fetchDeps();
     }
   }, [open]);
 
-  async function onSubmit(values: AssetFormValues) {
+  const onSubmit = async (values: any) => {
     setLoading(true);
     try {
-      await assetService.createAsset(values);
-      toast.success("Asset created successfully");
-      form.reset();
+      const res = await fetch("/api/fm/asset-management", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+
+      if (!res.ok) throw new Error("Failed to save asset");
+
+      toast.success("Asset added successfully!");
       setOpen(false);
-    } catch (error) {
-      toast.error("Failed to save asset");
+      form.reset();
+      onSuccess(); // Triggers the table refresh in the parent page
+    } catch (error: any) {
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Add Asset
-        </Button>
+        <Button>Add New Asset</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Asset</DialogTitle>
-          <DialogDescription>
-            Input all technical and financial details.
-          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="grid grid-cols-2 gap-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Item Name */}
             <FormField
               control={form.control}
               name="item_name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Item Name</FormLabel>
-                  <Input placeholder="e.g. Laptop" {...field} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="item_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Item Type</FormLabel>
-                  <Input placeholder="e.g. Electronics" {...field} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="item_classification"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Classification</FormLabel>
-                  <Input placeholder="e.g. Asset" {...field} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="barcode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Barcode</FormLabel>
-                  <Input {...field} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="rfid_code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>RFID Code</FormLabel>
-                  <Input {...field} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity</FormLabel>
-                  <Input type="number" {...field} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="cost_per_item"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unit Cost</FormLabel>
-                  <Input type="number" {...field} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="life_span"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Life Span (Months)</FormLabel>
-                  <Input type="number" {...field} />
+                  <FormControl>
+                    <Input placeholder="e.g. Dell Latitude 5420" {...field} />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
 
+            {/* Department Selection */}
             <FormField
               control={form.control}
               name="department"
@@ -189,30 +127,154 @@ export default function AddAssetModal() {
                   <FormLabel>Department</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value?.toString()}
+                    defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select" />
+                        <SelectValue placeholder="Select Department" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {departments.map((d) => (
-                        <SelectItem
-                          key={d.department_id}
-                          value={d.department_id.toString()}
-                        >
-                          {d.department_description}
+                      {departments && departments.length > 0 ? (
+                        departments.map((d, index) => {
+                          // Create a safe ID: priority to d.id, then d.department_id, then the loop index
+                          const safeId = (
+                            d.id ||
+                            d.department_id ||
+                            index
+                          ).toString();
+
+                          return (
+                            <SelectItem
+                              key={`dept-${safeId}`} // Unique string key
+                              value={safeId} // Non-empty value
+                            >
+                              {d.department_name || "Unnamed Department"}
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <SelectItem key="loading-dept" value="loading" disabled>
+                          Loading departments...
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
 
-            <Button type="submit" className="col-span-2" disabled={loading}>
-              {loading && <Loader2 className="animate-spin mr-2" />} Save Asset
+            {/* Barcode & RFID */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="barcode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Barcode</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="rfid_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>RFID Code</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Cost & Quantity */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="cost_per_item"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost per Item</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantity</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Condition & Life Span */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="condition"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Condition</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {/* Static items need unique keys too */}
+                        <SelectItem key="cond-good" value="Good">
+                          Good
+                        </SelectItem>
+                        <SelectItem key="cond-fair" value="Fair">
+                          Fair
+                        </SelectItem>
+                        <SelectItem key="cond-poor" value="Poor">
+                          Poor
+                        </SelectItem>
+                        <SelectItem key="cond-broken" value="Broken">
+                          Broken
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="life_span"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Life Span (Months)</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Asset
             </Button>
           </form>
         </Form>
