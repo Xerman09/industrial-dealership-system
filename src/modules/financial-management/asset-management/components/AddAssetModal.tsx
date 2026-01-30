@@ -3,8 +3,28 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
+
+import {
+  Package,
+  Scan,
+  Landmark,
+  ClipboardList,
+  Loader2,
+  CalendarIcon,
+  Check,
+  ChevronsUpDown,
+  Plus,
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import {
   Dialog,
@@ -31,7 +51,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// Added ItemType and ItemClassification to imports
 import {
   assetFormSchema,
   AssetFormValues,
@@ -40,6 +59,14 @@ import {
   ItemType,
   ItemClassification,
 } from "../types";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface AddAssetModalProps {
   onSuccess: () => void;
@@ -50,11 +77,12 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  // Added state for Type and Classification dropdowns
   const [types, setTypes] = useState<ItemType[]>([]);
   const [classifications, setClassifications] = useState<ItemClassification[]>(
     [],
   );
+  const [typeSearch, setTypeSearch] = useState("");
+  const [classificationSearch, setClassificationSearch] = useState("");
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetFormSchema),
@@ -108,14 +136,12 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     try {
       const submissionData = {
         ...values,
-        // Convert date to ISO string for API split() logic
         date_acquired: values.date_acquired.toISOString(),
         cost_per_item: Number(values.cost_per_item),
         quantity: Number(values.quantity),
         life_span: Number(values.life_span),
         department: Number(values.department),
         employee: values.employee ? Number(values.employee) : null,
-        // Direct string values (can be ID string or new name string)
         item_type: values.item_type,
         item_classification: values.item_classification,
         barcode: values.barcode || "",
@@ -147,287 +173,527 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     }
   };
 
+  const itemTypes = [
+    { label: "Phone", value: "phone" },
+    { label: "Laptop", value: "laptop" },
+    { label: "Furniture", value: "furniture" },
+  ];
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>Add New Asset</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Asset</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            <Package className="h-6 w-6 text-primary" />
+            Add New Asset
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="item_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Item Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Dell Latitude 5420" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Dynamic Type and Classification Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="item_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Item Type *</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="Select or type new..."
-                          {...field}
-                          list="item-types-list"
-                          autoComplete="off" // Prevents browser-specific autocomplete from hiding your list
-                          onFocus={(e) =>
-                            e.target.setAttribute("list", "item-types-list")
-                          } // Re-triggers list on focus
-                        />
-                        <datalist id="item-types-list">
-                          {types.map((t) => (
-                            <option key={t.id} value={t.type_name} />
-                          ))}
-                        </datalist>
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Select existing or type a new type.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="px-6 pb-8 space-y-6"
+          >
+            {/* SECTION 1: GENERAL INFO */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <ClipboardList className="h-4 w-4" /> General Details
+              </div>
+              <Separator />
 
               <FormField
                 control={form.control}
-                name="item_classification"
+                name="item_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Classification *</FormLabel>
+                    <FormLabel>Item Name *</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="Select or type new..."
-                          {...field}
-                          list="item-class-list"
-                          autoComplete="off" // Prevents browser-specific autocomplete from hiding your list
-                          onFocus={(e) =>
-                            e.target.setAttribute("list", "item-types-list")
-                          }
-                        />
-                        <datalist id="item-class-list">
-                          {classifications.map((c) => (
-                            <option key={c.id} value={c.classification_name} />
-                          ))}
-                        </datalist>
-                      </div>
-                    </FormControl>
-                    <FormDescription>e.g. ICT, Furniture, etc.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="barcode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Barcode</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Optional" {...field} />
+                      <Input
+                        placeholder="e.g. Dell Latitude 5420"
+                        {...field}
+                        className="bg-muted/20 h-10"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="rfid_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>RFID Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Optional" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="department"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department *</FormLabel>
-                    <Select
-                      onValueChange={(val) => field.onChange(Number(val))}
-                      value={field.value > 0 ? field.value.toString() : ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Department" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {departments.map((d) => (
-                          <SelectItem
-                            key={d.department_id}
-                            value={d.department_id.toString()}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                {/* ITEM TYPE FIELD */}
+                <FormField
+                  control={form.control}
+                  name="item_type"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Item Type *</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between h-10",
+                                !field.value && "text-muted-foreground",
+                              )}
+                            >
+                              {field.value || "Select type..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-(--radix-popover-trigger-width) p-0"
+                          align="start"
+                        >
+                          <Command
+                            filter={(value, search) => {
+                              if (
+                                value
+                                  .toLowerCase()
+                                  .includes(search.toLowerCase())
+                              )
+                                return 1;
+                              return 0;
+                            }}
                           >
-                            {d.department_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                            <CommandInput
+                              placeholder="Search or type new..."
+                              value={typeSearch}
+                              onValueChange={setTypeSearch}
+                            />
+                            <CommandList>
+                              {/* Custom "Add New" Logic */}
+                              {typeSearch &&
+                                !types.some(
+                                  (t) =>
+                                    t.type_name.toLowerCase() ===
+                                    typeSearch.toLowerCase(),
+                                ) && (
+                                  <div
+                                    className="p-2 border-b cursor-pointer hover:bg-accent flex items-center gap-2 text-sm text-primary font-medium"
+                                    onClick={() => {
+                                      form.setValue("item_type", typeSearch);
+                                      setTypeSearch("");
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    <span>
+                                      Add{" "}
+                                      <span className="font-bold">
+                                        "{typeSearch}"
+                                      </span>{" "}
+                                      as new type
+                                    </span>
+                                  </div>
+                                )}
+                              <CommandGroup heading="Existing Types">
+                                {types
+                                  .filter((t) =>
+                                    t.type_name
+                                      .toLowerCase()
+                                      .includes(typeSearch.toLowerCase()),
+                                  )
+                                  .map((t) => (
+                                    <CommandItem
+                                      key={t.id}
+                                      value={t.type_name}
+                                      onSelect={(val) => {
+                                        form.setValue("item_type", val);
+                                        setTypeSearch("");
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          t.type_name === field.value
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      {t.type_name}
+                                    </CommandItem>
+                                  ))}
+                              </CommandGroup>
+                              <CommandEmpty>No results found.</CommandEmpty>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="employee"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned To</FormLabel>
-                    <Select
-                      onValueChange={(val) =>
-                        field.onChange(val === "none" ? null : Number(val))
-                      }
-                      value={field.value?.toString() ?? "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Optional" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Unassigned</SelectItem>
-                        {users.map((u) => (
-                          <SelectItem
-                            key={u.user_id}
-                            value={u.user_id.toString()}
+                {/* CLASSIFICATION FIELD */}
+                <FormField
+                  control={form.control}
+                  name="item_classification"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Classification *</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between h-10",
+                                !field.value && "text-muted-foreground",
+                              )}
+                            >
+                              {field.value || "Select classification..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-(--radix-popover-trigger-width) p-0"
+                          align="start"
+                        >
+                          <Command
+                            filter={(value, search) => {
+                              if (
+                                value
+                                  .toLowerCase()
+                                  .includes(search.toLowerCase())
+                              )
+                                return 1;
+                              return 0;
+                            }}
                           >
-                            {u.user_fname} {u.user_lname}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                            <CommandInput
+                              placeholder="Search or type new..."
+                              value={classificationSearch}
+                              onValueChange={setClassificationSearch}
+                            />
+                            <CommandList>
+                              {/* Custom "Add New" Logic */}
+                              {classificationSearch &&
+                                !classifications.some(
+                                  (c) =>
+                                    c.classification_name.toLowerCase() ===
+                                    classificationSearch.toLowerCase(),
+                                ) && (
+                                  <div
+                                    className="p-2 border-b cursor-pointer hover:bg-accent flex items-center gap-2 text-sm text-primary font-medium"
+                                    onClick={() => {
+                                      form.setValue(
+                                        "item_classification",
+                                        classificationSearch,
+                                      );
+                                      setClassificationSearch("");
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    <span>
+                                      Add{" "}
+                                      <span className="font-bold">
+                                        "{classificationSearch}"
+                                      </span>{" "}
+                                      as new
+                                    </span>
+                                  </div>
+                                )}
+                              <CommandGroup heading="Existing Classifications">
+                                {classifications
+                                  .filter((c) =>
+                                    c.classification_name
+                                      .toLowerCase()
+                                      .includes(
+                                        classificationSearch.toLowerCase(),
+                                      ),
+                                  )
+                                  .map((c) => (
+                                    <CommandItem
+                                      key={c.id}
+                                      value={c.classification_name}
+                                      onSelect={(val) => {
+                                        form.setValue(
+                                          "item_classification",
+                                          val,
+                                        );
+                                        setClassificationSearch("");
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          c.classification_name === field.value
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      {c.classification_name}
+                                    </CommandItem>
+                                  ))}
+                              </CommandGroup>
+                              <CommandEmpty>No results found.</CommandEmpty>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="cost_per_item"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cost per Item *</FormLabel>
-                    <FormControl>
+            {/* SECTION 2: TRACKING & ASSIGNMENT */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <Scan className="h-4 w-4" /> Tracking & Assignment
+              </div>
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="barcode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Barcode</FormLabel>
+                      <Input
+                        placeholder="Optional"
+                        {...field}
+                        className="h-10"
+                      />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="rfid_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>RFID Code</FormLabel>
+                      <Input
+                        placeholder="Optional"
+                        {...field}
+                        className="h-10"
+                      />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* FIX FOR IMAGE 2: Added items-end to ensure vertical alignment */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department *</FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(Number(val))}
+                        value={field.value > 0 ? field.value.toString() : ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Unassigned" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {departments.map((d) => (
+                            <SelectItem
+                              key={d.department_id}
+                              value={d.department_id.toString()}
+                            >
+                              {d.department_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="employee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assigned To</FormLabel>
+                      <Select
+                        onValueChange={(val) =>
+                          field.onChange(val === "none" ? null : Number(val))
+                        }
+                        value={field.value?.toString() ?? "none"}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Unassigned" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Unassigned</SelectItem>
+                          {users.map((u) => (
+                            <SelectItem
+                              key={u.user_id}
+                              value={u.user_id.toString()}
+                            >
+                              {u.user_fname} {u.user_lname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="date_acquired"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="mb-2.5">Date Acquired *</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full h-10 pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date > new Date()}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* SECTION 3: FINANCIALS & CONDITION */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                <Landmark className="h-4 w-4" /> Financials & Status
+              </div>
+              <Separator />
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                <FormField
+                  control={form.control}
+                  name="cost_per_item"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost</FormLabel>
                       <Input
                         type="number"
                         step="0.01"
                         {...field}
+                        className="h-10"
                         onChange={(e) =>
                           field.onChange(parseFloat(e.target.value) || 0)
                         }
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity *</FormLabel>
-                    <FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantity</FormLabel>
                       <Input
                         type="number"
                         {...field}
+                        className="h-10"
                         onChange={(e) =>
                           field.onChange(parseInt(e.target.value) || 1)
                         }
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="life_span"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Life Span (Months) *</FormLabel>
-                    <FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="life_span"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Life (Mo)</FormLabel>
                       <Input
                         type="number"
                         {...field}
+                        className="h-10"
                         onChange={(e) =>
                           field.onChange(parseInt(e.target.value) || 12)
                         }
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="condition"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Condition</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Good">Good</SelectItem>
+                          <SelectItem value="Bad">Bad</SelectItem>
+                          <SelectItem value="Under Maintenance">
+                            Maintenance
+                          </SelectItem>
+                          <SelectItem value="Discontinued">
+                            Discontinued
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="condition"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Condition *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Good">Good</SelectItem>
-                      <SelectItem value="Bad">Bad</SelectItem>
-                      <SelectItem value="Under Maintenance">
-                        Under Maintenance
-                      </SelectItem>
-                      <SelectItem value="Discontinued">Discontinued</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Asset
-            </Button>
+            <div className="flex items-center justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" className="min-w-30" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Asset
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>

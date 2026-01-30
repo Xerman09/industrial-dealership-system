@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { AssetTableData } from "../../types";
+import { date } from "zod";
 
 export const columns: ColumnDef<AssetTableData>[] = [
   {
@@ -33,6 +34,14 @@ export const columns: ColumnDef<AssetTableData>[] = [
     cell: ({ row }) => {
       const barcode = row.getValue("barcode") as string | null;
       return barcode || <span className="text-muted-foreground">—</span>;
+    },
+  },
+  {
+    accessorKey: "rfid_code",
+    header: "RFID Code",
+    cell: ({ row }) => {
+      const rfid = row.getValue("rfid_code") as string | null;
+      return rfid || <span className="text-muted-foreground">—</span>;
     },
   },
   {
