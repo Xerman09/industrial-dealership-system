@@ -28,9 +28,9 @@ export const columns: ColumnDef<AssetTableData>[] = [
     cell: ({ row }) => row.getValue("barcode") || "—",
   },
   {
-    accessorKey: "department",
+    accessorKey: "department_name",
     header: "Department",
-    cell: ({ row }) => row.getValue("department") || "—",
+    cell: ({ row }) => row.getValue("department_name") || "—",
   },
   {
     accessorKey: "condition",

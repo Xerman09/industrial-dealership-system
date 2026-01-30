@@ -40,7 +40,7 @@ export async function GET(req: Request) {
     }
 
     // 2. Main Asset Fetching Logic (Manual Merge for reliability)
-    const [assetsRes, itemsRes] = await Promise.all([
+    const [assetsRes, itemsRes, deptsRes] = await Promise.all([
       fetch(`${DIRECTUS_URL}/items/assets_and_equipment?limit=-1&sort=-id`, {
         headers: AUTH_HEADERS,
         cache: "no-store",
@@ -49,22 +49,28 @@ export async function GET(req: Request) {
         `${DIRECTUS_URL}/items/items?fields=id,item_name,item_type.type_name,item_classification.classification_name&limit=-1`,
         { headers: AUTH_HEADERS },
       ),
+      fetch(`${DIRECTUS_URL}/items/department?limit=-1`, {
+        headers: AUTH_HEADERS,
+      }),
     ]);
 
     const assetsJson = await assetsRes.json();
     const itemsJson = await itemsRes.json();
+    const deptsJson = await deptsRes.json();
 
-    if (!assetsRes.ok || !itemsRes.ok)
-      throw new Error("Failed to fetch from Directus");
+    // if (!assetsRes.ok || !itemsRes.ok)
+    //   throw new Error("Failed to fetch from Directus");
 
-    const assets = assetsJson.data || [];
+    // const assets = assetsJson.data || [];
+
     const itemsMap = new Map<number, ItemLookup>(
       (itemsJson.data || []).map((i: ItemLookup) => [i.id, i]),
     );
+    const deptsMap = new Map(
+      deptsJson.data?.map((d: any) => [d.department_id, d.department_name]),
+    );
 
-    // 3. Merge Logic (Ensures item_name is never N/A if it exists in items table)
-    const mergedData = assets.map((asset: any) => {
-      // Directus sometimes returns an object or just an ID for FKs
+    const mergedData = (assetsJson.data || []).map((asset: any) => {
       const actualItemId =
         typeof asset.item_id === "object" ? asset.item_id?.id : asset.item_id;
       const itemDetails = itemsMap.get(Number(actualItemId));
@@ -72,6 +78,7 @@ export async function GET(req: Request) {
       return {
         ...asset,
         item_name: itemDetails?.item_name ?? "N/A",
+        department_name: deptsMap.get(Number(asset.department)) ?? "Unassigned",
         item_type_name: itemDetails?.item_type?.type_name ?? "N/A",
         item_class_name:
           itemDetails?.item_classification?.classification_name ?? "N/A",
