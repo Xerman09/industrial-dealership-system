@@ -28,6 +28,11 @@ export const columns: ColumnDef<AssetTableData>[] = [
     cell: ({ row }) => row.getValue("barcode") || "—",
   },
   {
+    accessorKey: "department",
+    header: "Department",
+    cell: ({ row }) => row.getValue("department") || "—",
+  },
+  {
     accessorKey: "condition",
     header: "Condition",
     cell: ({ row }) => {

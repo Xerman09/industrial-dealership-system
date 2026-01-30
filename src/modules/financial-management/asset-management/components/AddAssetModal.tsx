@@ -72,25 +72,45 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
   const onSubmit = async (values: any) => {
     setLoading(true);
     try {
+      const submissionData = {
+        ...values,
+        // Convert strings to numbers to prevent Directus 400 errors
+        cost_per_item: Number(values.cost_per_item),
+        quantity: Number(values.quantity),
+        life_span: Number(values.life_span),
+        department: Number(values.department),
+        item_type: 2,
+        item_classification: 1,
+      };
+
       const res = await fetch("/api/fm/asset-management", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(submissionData),
       });
 
-      if (!res.ok) throw new Error("Failed to save asset");
+      const result = await res.json();
 
-      toast.success("Asset added successfully!");
+      if (!res.ok) {
+        // If result.error is an object (from Directus), stringify it
+        const errorMsg =
+          typeof result.error === "object"
+            ? JSON.stringify(result.error)
+            : result.error;
+        throw new Error(errorMsg || "Failed to save asset");
+      }
+
+      toast.success("Asset and Item Name saved successfully!");
       setOpen(false);
       form.reset();
-      onSuccess(); // Triggers the table refresh in the parent page
+      onSuccess();
     } catch (error: any) {
       toast.error(error.message);
+      console.error("Submission Error:", error);
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -117,7 +137,6 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
                 </FormItem>
               )}
             />
-
             {/* Department Selection */}
             <FormField
               control={form.control}
@@ -164,9 +183,8 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
                 </FormItem>
               )}
             />
-
-            {/* Barcode & RFID */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Barcode & RFID */} please ignore this
+            {/* <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="barcode"
@@ -191,8 +209,7 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
                   </FormItem>
                 )}
               />
-            </div>
-
+            </div> */}
             {/* Cost & Quantity */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -220,7 +237,6 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
                 )}
               />
             </div>
-
             {/* Condition & Life Span */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -271,7 +287,6 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
                 )}
               />
             </div>
-
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Asset
