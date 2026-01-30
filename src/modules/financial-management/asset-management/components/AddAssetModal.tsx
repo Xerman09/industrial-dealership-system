@@ -20,6 +20,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -30,7 +31,15 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { assetFormSchema, AssetFormValues, Department, User } from "../types";
+// Added ItemType and ItemClassification to imports
+import {
+  assetFormSchema,
+  AssetFormValues,
+  Department,
+  User,
+  ItemType,
+  ItemClassification,
+} from "../types";
 
 interface AddAssetModalProps {
   onSuccess: () => void;
@@ -41,13 +50,18 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  // Added state for Type and Classification dropdowns
+  const [types, setTypes] = useState<ItemType[]>([]);
+  const [classifications, setClassifications] = useState<ItemClassification[]>(
+    [],
+  );
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetFormSchema),
     defaultValues: {
       item_name: "",
-      item_type: "2",
-      item_classification: "1",
+      item_type: "",
+      item_classification: "",
       barcode: "",
       rfid_code: "",
       condition: "Good",
@@ -55,7 +69,7 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
       cost_per_item: 0,
       life_span: 12,
       date_acquired: new Date(),
-      department: undefined,
+      department: 0,
       employee: null,
     },
   });
@@ -64,14 +78,22 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     if (open) {
       const fetchData = async () => {
         try {
-          const [depRes, userRes] = await Promise.all([
+          const [depRes, userRes, typeRes, classRes] = await Promise.all([
             fetch("/api/fm/asset-management?type=departments"),
             fetch("/api/fm/asset-management?type=users"),
+            fetch("/api/fm/asset-management?type=item_types"),
+            fetch("/api/fm/asset-management?type=item_classifications"),
           ]);
+
           const depData = await depRes.json();
           const userData = await userRes.json();
+          const typeData = await typeRes.json();
+          const classData = await classRes.json();
+
           setDepartments(Array.isArray(depData) ? depData : []);
           setUsers(Array.isArray(userData) ? userData : []);
+          setTypes(Array.isArray(typeData) ? typeData : []);
+          setClassifications(Array.isArray(classData) ? classData : []);
         } catch (error) {
           console.error("Failed to load dropdown data", error);
           toast.error("Failed to load form options");
@@ -86,19 +108,19 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     try {
       const submissionData = {
         ...values,
-        // Convert date to ISO string
+        // Convert date to ISO string for API split() logic
         date_acquired: values.date_acquired.toISOString(),
-        // Ensure proper number types
         cost_per_item: Number(values.cost_per_item),
         quantity: Number(values.quantity),
         life_span: Number(values.life_span),
         department: Number(values.department),
         employee: values.employee ? Number(values.employee) : null,
-        // Ensure these are strings for Directus
+        // Direct string values (can be ID string or new name string)
         item_type: values.item_type,
         item_classification: values.item_classification,
         barcode: values.barcode || "",
         rfid_code: values.rfid_code || "",
+        encoder: 133,
       };
 
       const res = await fetch("/api/fm/asset-management", {
@@ -151,6 +173,71 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
               )}
             />
 
+            {/* Dynamic Type and Classification Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="item_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Item Type *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="Select or type new..."
+                          {...field}
+                          list="item-types-list"
+                          autoComplete="off" // Prevents browser-specific autocomplete from hiding your list
+                          onFocus={(e) =>
+                            e.target.setAttribute("list", "item-types-list")
+                          } // Re-triggers list on focus
+                        />
+                        <datalist id="item-types-list">
+                          {types.map((t) => (
+                            <option key={t.id} value={t.type_name} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Select existing or type a new type.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="item_classification"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Classification *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="Select or type new..."
+                          {...field}
+                          list="item-class-list"
+                          autoComplete="off" // Prevents browser-specific autocomplete from hiding your list
+                          onFocus={(e) =>
+                            e.target.setAttribute("list", "item-types-list")
+                          }
+                        />
+                        <datalist id="item-class-list">
+                          {classifications.map((c) => (
+                            <option key={c.id} value={c.classification_name} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </FormControl>
+                    <FormDescription>e.g. ICT, Furniture, etc.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -190,7 +277,7 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
                     <FormLabel>Department *</FormLabel>
                     <Select
                       onValueChange={(val) => field.onChange(Number(val))}
-                      value={field.value?.toString()}
+                      value={field.value > 0 ? field.value.toString() : ""}
                     >
                       <FormControl>
                         <SelectTrigger>

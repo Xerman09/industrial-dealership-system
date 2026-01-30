@@ -14,21 +14,31 @@ export const userSchema = z.object({
   user_lname: z.string(),
 });
 
+export const itemTypeSchema = z.object({
+  id: z.number(),
+  type_name: z.string(),
+});
+
+export const itemClassificationSchema = z.object({
+  id: z.number(),
+  classification_name: z.string(),
+});
+
 // --- 2. Form Schema (Client-side form values) ---
 
 export const assetFormSchema = z.object({
   item_name: z.string().min(1, "Item name is required"),
   item_type: z.string().min(1, "Item type is required"),
   item_classification: z.string().min(1, "Classification is required"),
-  barcode: z.string().optional().default(""),
-  rfid_code: z.string().optional().default(""),
+  barcode: z.string(),
+  rfid_code: z.string(),
   condition: z.enum(["Good", "Bad", "Under Maintenance", "Discontinued"]),
   quantity: z.number().min(1, "Quantity must be at least 1"),
   cost_per_item: z.number().min(0, "Cost must be positive"),
   life_span: z.number().min(1, "Life span must be at least 1 month"),
   date_acquired: z.date(),
   department: z.number(),
-  employee: z.number().optional().nullable(),
+  employee: z.number().nullable(),
   item_image: z.any().optional(),
 });
 
@@ -82,3 +92,5 @@ export type User = z.infer<typeof userSchema>;
 export type AssetFormValues = z.infer<typeof assetFormSchema>;
 export type AssetSubmissionData = z.infer<typeof assetSubmissionSchema>;
 export type AssetTableData = z.infer<typeof assetTableDataSchema>;
+export type ItemType = z.infer<typeof itemTypeSchema>;
+export type ItemClassification = z.infer<typeof itemClassificationSchema>;
