@@ -131,37 +131,27 @@ export const columns: ColumnDef<AssetTableData>[] = [
   },
   {
     accessorKey: "total_value",
-    header: "Projected Value",
-    cell: ({ row }) => {
-      const [viewDate, setViewDate] = useState<Date>(new Date());
-      const asset = row.original;
-
-      const projectedValue = getDepreciatedValue(
-        Number(asset.cost_per_item) * Number(asset.quantity),
-        Number(asset.life_span),
-        new Date(asset.date_acquired).getTime(),
-        viewDate,
-      );
+    header: ({ table }) => {
+      const meta = table.options.meta as any;
+      const setProjectionDate = meta?.setProjectionDate;
 
       return (
         <div className="flex items-center gap-2">
-          <span className="font-mono font-medium text-primary whitespace-nowrap">
-            {formatPHP(projectedValue)}
-          </span>
-
+          <span>Projected Value</span>
           <Select
+            defaultValue="now"
             onValueChange={(val) => {
               const newDate = new Date();
               if (val === "1d") newDate.setDate(newDate.getDate() + 1);
-              if (val === "1m") newDate.setMonth(newDate.getMonth() + 1);
-              if (val === "1y") newDate.setFullYear(newDate.getFullYear() + 1);
-              setViewDate(newDate);
+              else if (val === "1m") newDate.setMonth(newDate.getMonth() + 1);
+              else if (val === "1y")
+                newDate.setFullYear(newDate.getFullYear() + 1);
+              setProjectionDate?.(newDate);
             }}
           >
-            <SelectTrigger className="h-7 w-fit p-0 border-none bg-transparent hover:bg-muted transition-colors flex justify-center">
-              <SelectValue placeholder="" />
+            <SelectTrigger className="h-7 w-[100px] border-none bg-transparent hover:bg-muted/50 transition-colors">
+              <SelectValue />
             </SelectTrigger>
-
             <SelectContent align="end">
               <SelectItem value="now">Current</SelectItem>
               <SelectItem value="1d">In 1 Day</SelectItem>
@@ -170,6 +160,25 @@ export const columns: ColumnDef<AssetTableData>[] = [
             </SelectContent>
           </Select>
         </div>
+      );
+    },
+    cell: ({ row, table }) => {
+      const asset = row.original;
+      const meta = table.options.meta as any;
+      const projectionDate = meta?.projectionDate || new Date();
+
+      const projectedValue = getDepreciatedValue(
+        Number(asset.cost_per_item),
+        Number(asset.quantity),
+        Number(asset.life_span),
+        asset.date_acquired,
+        projectionDate,
+      );
+
+      return (
+        <span className="font-mono font-medium text-primary whitespace-nowrap">
+          {formatPHP(projectedValue)}
+        </span>
       );
     },
   },
