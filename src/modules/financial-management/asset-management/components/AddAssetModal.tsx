@@ -137,6 +137,29 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     }
   }, [open]);
 
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      const now = new Date();
+      form.reset({
+        item_name: "",
+        item_type: "",
+        item_classification: "",
+        barcode: "",
+        rfid_code: "",
+        condition: "Good",
+        quantity: 1,
+        cost_per_item: 0,
+        life_span: 5,
+        date_acquired: now,
+        department: 0,
+        employee: null,
+      });
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -180,15 +203,25 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     try {
       let finalImageValue = null;
 
+      // if (selectedFile) {
+      //   finalImageValue = await uploadToDirectus(selectedFile);
+      //   console.log("DEBUG: Image Value to be submitted:", finalImageValue);
+      // } else {
+      //   console.log("DEBUG: No file selected, skipping upload.");
+      // }
+
       if (selectedFile) {
         finalImageValue = await uploadToDirectus(selectedFile);
         console.log("DEBUG: Image Value to be submitted:", finalImageValue);
-      } else {
-        console.log("DEBUG: No file selected, skipping upload.");
       }
+
+      console.log("DEBUG: Form values before submission:", values);
+      console.log("DEBUG: date_acquired value:", values.date_acquired);
+      console.log("DEBUG: date_acquired type:", typeof values.date_acquired);
+
       const submissionData = {
         ...values,
-        date_acquired: values.date_acquired.toISOString(),
+        date_acquired: values.date_acquired.toISOString().split("T")[0],
         cost_per_item: Number(values.cost_per_item),
         quantity: Number(values.quantity),
         life_span: Number(values.life_span),
@@ -202,6 +235,11 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
         item_image: finalImageValue,
       };
 
+      console.log(
+        "DEBUG: Submission data:",
+        JSON.stringify(submissionData, null, 2),
+      );
+
       const res = await fetch("/api/fm/asset-management", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -209,7 +247,6 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
       });
 
       const result = await res.json();
-      console.log("DEBUG: Asset Management Save Result:", result);
 
       if (!res.ok) {
         throw new Error(result.error || "Failed to save asset");
@@ -217,7 +254,7 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
 
       toast.success("Asset saved successfully!");
       setOpen(false);
-      form.reset();
+      resetForm();
       onSuccess();
     } catch (error: any) {
       console.error("Asset creation error:", error);
@@ -228,19 +265,26 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
   };
 
   const resetForm = () => {
-    form.reset();
+    form.reset({
+      item_name: "",
+      item_type: "",
+      item_classification: "",
+      barcode: "",
+      rfid_code: "",
+      condition: "Good",
+      quantity: 1,
+      cost_per_item: 0,
+      life_span: 5,
+      date_acquired: new Date(), // ✅ Add this
+      department: 0,
+      employee: null,
+    });
     setSelectedFile(null);
     setPreviewUrl(null);
   };
 
-  const itemTypes = [
-    { label: "Phone", value: "phone" },
-    { label: "Laptop", value: "laptop" },
-    { label: "Furniture", value: "furniture" },
-  ];
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>Add New Asset</Button>
       </DialogTrigger>

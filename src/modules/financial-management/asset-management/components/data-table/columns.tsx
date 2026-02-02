@@ -149,7 +149,7 @@ export const columns: ColumnDef<AssetTableData>[] = [
               setProjectionDate?.(newDate);
             }}
           >
-            <SelectTrigger className="h-7 w-[100px] border-none bg-transparent hover:bg-muted/50 transition-colors">
+            <SelectTrigger className="h-7 w-25 border-none bg-transparent hover:bg-muted/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
             <SelectContent align="end">
