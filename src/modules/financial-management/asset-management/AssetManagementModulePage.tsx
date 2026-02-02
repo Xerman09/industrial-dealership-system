@@ -12,14 +12,24 @@ import { AssetTableData } from "./types";
 import { AssetDataTable } from "./components/data-table";
 import { formatPHP, getDepreciatedValue } from "./utils/lib";
 import { ColumnFiltersState } from "@tanstack/react-table";
+import { AssetTableSkeleton } from "./components/data-table/skeleton-loader";
+import { ErrorPage } from "@/app/(financial-management)/fm/_components/ErrorPage";
 
 export default function AssetManagementModulePage() {
   const [data, setData] = useState<AssetTableData[]>([]);
+  const [errorState, setErrorState] = useState<{
+    hasError: boolean;
+    message?: string;
+  }>({
+    hasError: false,
+  });
   const [loading, setLoading] = useState(true);
   const [projectionDate, setProjectionDate] = useState<Date>(new Date());
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const totalValue = useMemo(() => {
+    if (!Array.isArray(data)) return 0;
+
     return data.reduce((acc, asset) => {
       return (
         acc +
@@ -37,10 +47,25 @@ export default function AssetManagementModulePage() {
   const fetchAssets = async () => {
     try {
       setLoading(true);
+      setErrorState({ hasError: false });
+
       const response = await fetch("/api/fm/asset-management");
+
+      if (!response.ok) throw new Error("Failed to fetch data from server");
+
       const result = await response.json();
+
+      // If result is not what we expect, throw error
+      if (!Array.isArray(result))
+        throw new Error("Invalid data format received");
+
       setData(result);
-    } catch (error) {
+    } catch (err: any) {
+      console.error(err);
+      setErrorState({
+        hasError: true,
+        message: err.message || "Could not load asset records.",
+      });
       toast.error("Failed to load assets.");
     } finally {
       setLoading(false);
@@ -50,6 +75,26 @@ export default function AssetManagementModulePage() {
   useEffect(() => {
     fetchAssets();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <AssetTableSkeleton />
+      </div>
+    );
+  }
+
+  if (errorState.hasError) {
+    return (
+      <div className="p-6">
+        <ErrorPage
+          title="Data Connection Error"
+          message={errorState.message}
+          onRefresh={fetchAssets} // Retries the fetch instead of full page reload
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-4">
@@ -75,22 +120,16 @@ export default function AssetManagementModulePage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex h-60 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <AssetDataTable
-          columns={columns}
-          data={data}
-          columnFilters={columnFilters}
-          onColumnFiltersChange={setColumnFilters}
-          tableMeta={{
-            projectionDate,
-            setProjectionDate,
-          }}
-        />
-      )}
+      <AssetDataTable
+        columns={columns}
+        data={data}
+        columnFilters={columnFilters}
+        onColumnFiltersChange={setColumnFilters}
+        tableMeta={{
+          projectionDate,
+          setProjectionDate,
+        }}
+      />
     </div>
   );
 }
