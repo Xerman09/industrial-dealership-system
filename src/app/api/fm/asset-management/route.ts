@@ -219,8 +219,6 @@ export async function POST(req: Request) {
     let dateStr: string;
     const dateInput = body.date_acquired;
 
-    console.log("DEBUG: Received date_acquired:", dateInput, typeof dateInput);
-
     if (!dateInput) {
       dateStr = new Date().toISOString().split("T")[0];
     } else if (typeof dateInput === "string") {
@@ -241,8 +239,6 @@ export async function POST(req: Request) {
       // Fallback for any other type
       dateStr = new Date().toISOString().split("T")[0];
     }
-
-    console.log("DEBUG: Final dateStr:", dateStr);
 
     const assetPayload = {
       item_id: itemId,

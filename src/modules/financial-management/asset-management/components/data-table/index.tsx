@@ -19,6 +19,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DataTablePagination } from "./table-pagination";
+import { useState } from "react";
+import ViewAssetModal from "../AssetViewModal";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -37,6 +39,9 @@ export function AssetDataTable<TData, TValue>({
     pageSize: 10,
   });
 
+  const [selectedAsset, setSelectedAsset] = useState<TData | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+
   const table = useReactTable({
     data,
     columns,
@@ -45,7 +50,12 @@ export function AssetDataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onPaginationChange: setPagination,
     // FIX: Pass tableMeta into the internal meta state
-    meta: tableMeta,
+    meta: {
+      onView: (asset: TData) => {
+        setSelectedAsset(asset);
+        setIsViewOpen(true);
+      },
+    },
     state: {
       pagination,
     },
@@ -99,6 +109,11 @@ export function AssetDataTable<TData, TValue>({
         </Table>
       </div>
       <DataTablePagination table={table} />
+      <ViewAssetModal
+        asset={selectedAsset as any}
+        isOpen={isViewOpen}
+        onOpenChange={setIsViewOpen}
+      />
     </div>
   );
 }

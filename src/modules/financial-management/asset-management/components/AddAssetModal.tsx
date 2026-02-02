@@ -203,21 +203,9 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     try {
       let finalImageValue = null;
 
-      // if (selectedFile) {
-      //   finalImageValue = await uploadToDirectus(selectedFile);
-      //   console.log("DEBUG: Image Value to be submitted:", finalImageValue);
-      // } else {
-      //   console.log("DEBUG: No file selected, skipping upload.");
-      // }
-
       if (selectedFile) {
         finalImageValue = await uploadToDirectus(selectedFile);
-        console.log("DEBUG: Image Value to be submitted:", finalImageValue);
       }
-
-      console.log("DEBUG: Form values before submission:", values);
-      console.log("DEBUG: date_acquired value:", values.date_acquired);
-      console.log("DEBUG: date_acquired type:", typeof values.date_acquired);
 
       const submissionData = {
         ...values,
@@ -234,11 +222,6 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
         encoder: 133,
         item_image: finalImageValue,
       };
-
-      console.log(
-        "DEBUG: Submission data:",
-        JSON.stringify(submissionData, null, 2),
-      );
 
       const res = await fetch("/api/fm/asset-management", {
         method: "POST",

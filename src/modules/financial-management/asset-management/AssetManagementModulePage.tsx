@@ -17,7 +17,6 @@ export default function AssetManagementModulePage() {
   const [loading, setLoading] = useState(true);
   const [projectionDate, setProjectionDate] = useState<Date>(new Date());
 
-  // Calculate aggregate total for the summary header (Always Current Value)
   const totalValue = useMemo(() => {
     return data.reduce((acc, asset) => {
       return (
@@ -53,18 +52,13 @@ export default function AssetManagementModulePage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Asset Management
-          </h1>
-          <div className="mt-4">
-            <h2 className="text-2xl font-bold text-primary">
-              {formatPHP(totalValue)}
-            </h2>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-              Total Current Asset Value
-            </p>
-          </div>
+        <div className="mt-4">
+          <h2 className="text-2xl font-bold text-primary">
+            {formatPHP(totalValue)}
+          </h2>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            Total Current Asset Value
+          </p>
         </div>
 
         <div className="flex items-center gap-2">

@@ -12,8 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package } from "lucide-react";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import {
+  Ellipsis,
+  EllipsisVertical,
+  Eye,
+  Package,
+  SquarePen,
+  Trash2,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 export const columns: ColumnDef<AssetTableData>[] = [
   {
@@ -137,7 +152,6 @@ export const columns: ColumnDef<AssetTableData>[] = [
 
       return (
         <div className="flex items-center gap-2">
-          <span>Projected Value</span>
           <Select
             defaultValue="now"
             onValueChange={(val) => {
@@ -149,11 +163,11 @@ export const columns: ColumnDef<AssetTableData>[] = [
               setProjectionDate?.(newDate);
             }}
           >
-            <SelectTrigger className="h-7 w-25 border-none bg-transparent hover:bg-muted/50 transition-colors">
+            <SelectTrigger className="h-7 w-fit border-none bg-transparent hover:bg-muted/50 transition-colors">
               <SelectValue />
             </SelectTrigger>
             <SelectContent align="end">
-              <SelectItem value="now">Current</SelectItem>
+              <SelectItem value="now">Projected Value</SelectItem>
               <SelectItem value="1d">In 1 Day</SelectItem>
               <SelectItem value="1m">In 1 Month</SelectItem>
               <SelectItem value="1y">In 1 Year</SelectItem>
@@ -208,6 +222,40 @@ export const columns: ColumnDef<AssetTableData>[] = [
         day: "numeric",
       });
       return <span className="text-sm">{formatted}</span>;
+    },
+  },
+  {
+    id: "actions",
+    cell: ({ row, table }) => {
+      const asset = row.original;
+      const meta = table.options.meta as any;
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+              size="icon"
+            >
+              <EllipsisVertical className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuItem>
+              <SquarePen /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => meta?.onView(asset)}>
+              <Eye /> View
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">
+              <Trash2 /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
     },
   },
 ];
