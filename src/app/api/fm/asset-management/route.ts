@@ -163,7 +163,7 @@ export async function GET(req: Request) {
         ...asset,
         item_name: baseItem?.item_name ?? "N/A",
         item_type_name: typesMap.get(Number(baseItem?.item_type)) ?? "N/A",
-        item_classification_name:
+        classification_name:
           classMap.get(Number(baseItem?.item_classification)) ?? "N/A",
         department_name: deptsMap.get(Number(asset.department)) ?? "Unassigned",
         assigned_to_name: usersMap.get(Number(asset.employee)) ?? "Unassigned",
@@ -219,8 +219,6 @@ export async function POST(req: Request) {
     let dateStr: string;
     const dateInput = body.date_acquired;
 
-    console.log("DEBUG: Received date_acquired:", dateInput, typeof dateInput);
-
     if (!dateInput) {
       dateStr = new Date().toISOString().split("T")[0];
     } else if (typeof dateInput === "string") {
@@ -242,8 +240,6 @@ export async function POST(req: Request) {
       dateStr = new Date().toISOString().split("T")[0];
     }
 
-    console.log("DEBUG: Final dateStr:", dateStr);
-
     const assetPayload = {
       item_id: itemId,
       condition: body.condition || "Good",
@@ -258,6 +254,7 @@ export async function POST(req: Request) {
       rfid_code: body.rfid_code || null,
       encoder: 81,
       item_image: body.item_image || null,
+      classification_name: body.item_classification,
     };
 
     console.log("DEBUG: assetPayload:", JSON.stringify(assetPayload, null, 2));
