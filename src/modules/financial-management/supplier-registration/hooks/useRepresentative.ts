@@ -29,7 +29,7 @@ export function useRepresentatives(supplierId: number | null) {
       setError(null);
 
       const response = await fetch(
-        `/api/supplier-registration/representative?supplier_id=${id}`,
+        `/api/supplier-registration/representativ?supplier_id=${id}`,
       );
 
       if (!response.ok) {
