@@ -33,19 +33,32 @@ const data = {
         },
         {
             title: "Asset Management",
-            url: "fm/asset-management",
+            url: "/fm/asset-management",
             icon: SquareTerminal,
             isActive: true,
             // items: [{ title: "Purchase Order", url: "/scm/supplier-management/purchase-order" }],
         },
         {
             title: "Chart Of Accounts",
-            url: "fm/chart-of-accounts",
+            url: "/fm/chart-of-accounts",
             icon: SquareTerminal,
             isActive: true,
             // items: [{ title: "Purchase Order", url: "/scm/supplier-management/purchase-order" }],
         },
-
+        {
+            title: "Line Discount",
+            url: "/fm/line-discount",
+            icon: SquareTerminal,
+            isActive: true,
+            // items: [{ title: "Purchase Order", url: "/scm/supplier-management/purchase-order" }],
+        },
+        {
+            title: "Discount Type",
+            url: "/fm/discount-type",
+            icon: SquareTerminal,
+            isActive: true,
+            // items: [{ title: "Purchase Order", url: "/scm/supplier-management/purchase-order" }],
+        },
     ],
 }
 
