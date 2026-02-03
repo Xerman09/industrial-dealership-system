@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Supplier } from "@/modules/financial-management/supplier-registration/types/supplier.schema";
-import { useRepresentatives } from "@/modules/financial-management/supplier-registration/hooks/useRepresentative";
+import { useRepresentatives } from "@/modules/financial-management/supplier-registration/hooks/useRepresentatives";
 import { RepresentativeCard } from "./ViewRepresentativeDetails";
 import { AddRepresentativeForm } from "./AddRepresentativeForm";
 import { useState } from "react";

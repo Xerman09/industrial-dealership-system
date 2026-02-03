@@ -22,8 +22,14 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SupplierRepresentativeModulePage() {
-  const { suppliers, isLoading, error, refresh, setSearchQuery } =
-    useSuppliers();
+  const {
+    suppliers,
+    isLoading,
+    error,
+    refresh,
+    setSearchQuery,
+    deleteSupplier,
+  } = useSuppliers();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null,
   );
@@ -45,42 +51,10 @@ export default function SupplierRepresentativeModulePage() {
     toast.info("Edit functionality will be implemented in the next phase");
   };
 
-  // Handle delete supplier
-  const handleDelete = (supplier: Supplier) => {
-    setSupplierToDelete(supplier);
-    setDeleteDialogOpen(true);
-  };
-
-  // Confirm delete
-  const confirmDelete = async () => {
-    if (!supplierToDelete?.id) return;
-
-    try {
-      const response = await fetch(`/api/suppliers/${supplierToDelete.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete supplier");
-      }
-
-      toast.success("Supplier deleted successfully");
-      refresh();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to delete supplier",
-      );
-    } finally {
-      setDeleteDialogOpen(false);
-      setSupplierToDelete(null);
-    }
-  };
-
   // Create columns with handlers
   const columns = createColumns({
     onView: handleView,
     onEdit: handleEdit,
-    onDelete: handleDelete,
   });
 
   return (
@@ -151,30 +125,6 @@ export default function SupplierRepresentativeModulePage() {
           setSelectedSupplier(null);
         }}
       />
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Supplier?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete{" "}
-              <strong>{supplierToDelete?.supplier_name}</strong>? This action
-              cannot be undone and will also remove all associated
-              representatives.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

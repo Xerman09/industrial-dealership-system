@@ -29,7 +29,7 @@ export function useRepresentatives(supplierId: number | null) {
       setError(null);
 
       const response = await fetch(
-        `/api/supplier-registration/representativ?supplier_id=${id}`,
+        `/api/supplier-registration/representatives?supplier_id=${id}`,
       );
 
       if (!response.ok) {
@@ -63,7 +63,7 @@ export function useRepresentatives(supplierId: number | null) {
         };
 
         const response = await fetch(
-          "/api/supplier-registration/representative",
+          "/api/supplier-registration/representatives",
           {
             method: "POST",
             headers: {
@@ -106,7 +106,7 @@ export function useRepresentatives(supplierId: number | null) {
 
       try {
         const response = await fetch(
-          `/api/supplier-registration/representative/${id}`,
+          `/api/supplier-registration/representatives/${id}`,
           {
             method: "DELETE",
           },

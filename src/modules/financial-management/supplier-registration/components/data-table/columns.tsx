@@ -18,13 +18,11 @@ import { formatDate } from "@/modules/financial-management/supplier-registration
 interface ColumnsProps {
   onView: (supplier: Supplier) => void;
   onEdit: (supplier: Supplier) => void;
-  onDelete: (supplier: Supplier) => void;
 }
 
 export const createColumns = ({
   onView,
   onEdit,
-  onDelete,
 }: ColumnsProps): ColumnDef<Supplier>[] => [
   {
     accessorKey: "supplier_name",
@@ -108,13 +106,6 @@ export const createColumns = ({
               Edit
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(supplier)}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

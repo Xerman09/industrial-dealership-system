@@ -15,7 +15,7 @@ const API_BASE = `${API_BASE_URL}/items`;
  */
 const getHeaders = () => ({
   "Content-Type": "application/json",
-  "Authorization": `Bearer ${process.env.DIRECTUS_STATIC_TOKEN}`,
+  Authorization: `Bearer ${process.env.DIRECTUS_STATIC_TOKEN}`,
 });
 /**
  * Fetch all suppliers with recursive pattern
@@ -117,28 +117,6 @@ export async function updateSupplier(
     return result.data;
   } catch (error) {
     console.error(`Error updating supplier ${id}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Delete supplier
- */
-export async function deleteSupplier(id: number): Promise<void> {
-  try {
-    const response = await fetch(`${API_BASE}/suppliers/${id}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(
-        error.errors?.[0]?.message || "Failed to delete supplier",
-      );
-    }
-  } catch (error) {
-    console.error(`Error deleting supplier ${id}:`, error);
     throw error;
   }
 }

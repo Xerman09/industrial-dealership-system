@@ -17,7 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useRepresentatives } from "@/modules/financial-management/supplier-registration/hooks/useRepresentative";
+import { useRepresentatives } from "@/modules/financial-management/supplier-registration/hooks/useRepresentatives";
 
 interface AddRepresentativeFormProps {
   supplierId: number;
