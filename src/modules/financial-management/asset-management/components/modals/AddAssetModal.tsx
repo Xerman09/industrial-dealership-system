@@ -258,7 +258,7 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
       quantity: 1,
       cost_per_item: 0,
       life_span: 5,
-      date_acquired: new Date(), // ✅ Add this
+      date_acquired: new Date(),
       department: 0,
       employee: null,
     });
@@ -269,7 +269,10 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>Add New Asset</Button>
+        <Button>
+          <Plus className="h-4 w-4" />
+          Add New Asset
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto p-0">
         <DialogHeader className="p-6 pb-2">
