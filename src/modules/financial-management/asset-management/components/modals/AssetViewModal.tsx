@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   formatPHP,
   getDepreciatedValue,
@@ -17,9 +12,11 @@ import {
   User,
   Building,
   Barcode,
-  CalendarDays,
-  Tag,
   Cpu,
+  DollarSign,
+  Zap,
+  Tag,
+  CalendarDays,
 } from "lucide-react";
 
 export default function ViewAssetModal({
@@ -38,112 +35,137 @@ export default function ViewAssetModal({
     projectionDate,
   );
 
+  const originalCost = asset.cost_per_item * asset.quantity;
+  const depreciationPercentage =
+    ((originalCost - currentVal) / originalCost) * 100;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-150 p-0 overflow-hidden border-none shadow-2xl">
-        <DialogHeader className="p-6 pb-0">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <DialogTitle className="text-xl flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
+      <DialogContent className="max-w-[95vw] md:max-w-4xl p-0 overflow-hidden border-border bg-background shadow-2xl max-h-[95vh] flex flex-col">
+        {/* Responsive Container */}
+        <div className="flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
+          {/* LEFT PANEL: Asset Identity & Image (Blue Guide 1) */}
+          <div className="w-full md:w-[40%] bg-muted/30 p-6 md:p-8 flex flex-col border-b md:border-b-0 md:border-r relative overflow-hidden">
+            <div />
+
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="h-0.5 w-10 bg-primary" />
+                <span className="text-xs font-bold tracking-widest text-primary uppercase">
+                  Asset Profile
+                </span>
+              </div>
+
+              <div className="relative mx-auto w-full max-w-70 md:max-w-full">
+                <div className="aspect-square rounded-xl bg-background border-2 border-muted flex items-center justify-center overflow-hidden">
+                  {asset.item_image ? (
+                    <img
+                      src={`/api/fm/asset-management/asset-image-view?id=${asset.item_image}`}
+                      className="object-contain w-full h-full p-6"
+                      alt={asset.item_name}
+                    />
+                  ) : (
+                    <Package className="h-16 w-16 text-muted" />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <Badge
+                  variant="default"
+                  className="w-fit text-xs uppercase tracking-wider px-3"
+                >
+                  {asset.condition || "Functional"}
+                </Badge>
+                <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
+                  <MetricItem
+                    icon={<Tag size={16} />}
+                    label="Classification"
+                    value={asset.classification_name}
+                  />
+                  <MetricItem
+                    icon={<CalendarDays size={16} />}
+                    label="Acquired"
+                    value={new Date(asset.date_acquired).toLocaleDateString(
+                      undefined,
+                      { dateStyle: "medium" },
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT PANEL: Analytics & Details */}
+          <div className="w-full md:w-[60%] p-6 md:p-8 flex flex-col bg-background">
+            <div className="mb-8">
+              <DialogTitle className="text-2xl md:text-3xl font-bold uppercase leading-none mb-3">
                 {asset.item_name}
               </DialogTitle>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground font-mono">
-                <span className="flex items-center gap-1">
-                  <Barcode size={14} /> {asset.barcode || "N/A"}
+              <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground uppercase">
+                <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded">
+                  <Barcode size={14} className="text-primary" />{" "}
+                  {asset.barcode || "N/A"}
                 </span>
-                <span className="text-border">|</span>
-                <span className="flex items-center gap-1">
-                  <Cpu size={14} /> {asset.rfid_code || "No RFID"}
+                <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded">
+                  <Cpu size={14} className="text-primary" />{" "}
+                  {asset.rfid_code || "N/A"}
                 </span>
               </div>
             </div>
-            <Badge
-              variant={asset.condition === "Bad" ? "destructive" : "secondary"}
-            >
-              {asset.condition}
-            </Badge>
-          </div>
-        </DialogHeader>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Left Side: Visual & Category (4 Columns) */}
-          <div className="md:col-span-5 space-y-4">
-            <div className="aspect-square rounded-xl border bg-secondary/20 flex items-center justify-center overflow-hidden ring-1 ring-border">
-              {asset.item_image ? (
-                <img
-                  src={`/api/fm/asset-management/asset-image-view?id=${asset.item_image}`}
-                  className="object-cover h-full w-full"
-                  alt={asset.item_name}
+            <div className="space-y-6 grow">
+              <div className="p-6 rounded-2xl bg-muted/40 border border-border relative overflow-hidden group">
+                <DollarSign
+                  size={64}
+                  className="absolute top-0 right-0 p-4 opacity-5"
                 />
-              ) : (
-                <Package className="h-16 w-16 text-muted-foreground/20" />
-              )}
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <Detail
-                label="Classification"
-                value={asset.classification_name}
-                icon={<Tag size={12} />}
-              />
-              <Detail
-                label="Acquisition Date"
-                value={new Date(asset.date_acquired).toLocaleDateString(
-                  "en-US",
-                  { month: "long", day: "numeric", year: "numeric" },
-                )}
-                icon={<CalendarDays size={12} />}
-              />
-            </div>
-          </div>
-
-          {/* Right Side: Deployment & Finance (7 Columns) */}
-          <div className="md:col-span-7 space-y-6">
-            <div className="grid grid-cols-1 gap-4 bg-muted/30 p-4 rounded-lg border border-border/50">
-              <Detail
-                label="Department"
-                value={asset.department_name}
-                icon={<Building size={14} />}
-              />
-              <Detail
-                label="Assigned Personnel"
-                value={asset.assigned_to_name}
-                icon={<User size={14} />}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-end text-sm px-1">
-                <div className="flex flex-col">
-                  <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-tight">
-                    Quantity
-                  </span>
-                  <span className="font-medium text-base">
-                    {asset.quantity} Units
-                  </span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-tight">
-                    Original Cost
-                  </span>
-                  <span className="font-mono text-base">
-                    {formatPHP(asset.cost_per_item * asset.quantity)}
-                  </span>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-end relative z-10 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                      Projected Value (2026)
+                    </p>
+                    <p className="text-3xl md:text-4xl font-bold">
+                      {formatPHP(currentVal)}
+                    </p>
+                  </div>
+                  {depreciationPercentage !== 0 && (
+                    <Badge
+                      variant={
+                        depreciationPercentage > 0 ? "destructive" : "default"
+                      }
+                      className="font-bold text-xs px-2 py-1"
+                    >
+                      {depreciationPercentage > 0 ? "-" : "+"}{" "}
+                      {Math.abs(depreciationPercentage).toFixed(1)}%
+                    </Badge>
+                  )}
                 </div>
               </div>
 
-              <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-primary/3 p-5">
-                <div className="flex flex-col gap-1 relative z-10">
-                  <span className="text-[10px] uppercase tracking-widest font-black text-primary/60">
-                    Projected Value ({projectionDate.toLocaleDateString()})
-                  </span>
-                  <span className="text-3xl font-black tracking-tighter text-primary font-mono">
-                    {formatPHP(currentVal)}
-                  </span>
-                </div>
+              {/* Financial Data Grid (Blue Guide 3) */}
+              <div className="grid grid-cols-2 gap-4">
+                <DataCard
+                  label="Original Cost"
+                  value={formatPHP(originalCost)}
+                />
+                <DataCard label="Quantity" value={`${asset.quantity} Units`} />
+              </div>
+
+              <Separator className="opacity-50" />
+
+              {/* Operational Block (Blue Guide 4) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-4">
+                <AssignmentBlock
+                  icon={<Building size={18} />}
+                  label="Department"
+                  value={asset.department_name}
+                />
+                <AssignmentBlock
+                  icon={<User size={18} />}
+                  label="Assigned To"
+                  value={asset.assigned_to_name}
+                />
               </div>
             </div>
           </div>
@@ -153,19 +175,45 @@ export default function ViewAssetModal({
   );
 }
 
-const Detail = ({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-}) => (
-  <div className="flex flex-col gap-1">
-    <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/80 flex items-center gap-1.5">
-      <span className="text-primary">{icon}</span> {label}
-    </span>
-    <p className="font-semibold text-sm">{value || "—"}</p>
-  </div>
-);
+function MetricItem({ icon, label, value }: any) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="p-2 rounded-lg bg-background border border-border text-primary shrink-0">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs uppercase font-bold text-muted-foreground leading-none mb-1">
+          {label}
+        </p>
+        <p className="text-xs font-medium truncate">{value || "---"}</p>
+      </div>
+    </div>
+  );
+}
+
+function DataCard({ label, value }: any) {
+  return (
+    <div className="p-4 rounded-xl border bg-card/50 shadow-sm">
+      <p className="text-xs uppercase font-bold text-muted-foreground/70 mb-2">
+        {label}
+      </p>
+      <p className="text-base md:text-lg font-bold truncate">{value}</p>
+    </div>
+  );
+}
+
+function AssignmentBlock({ icon, label, value }: any) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-primary">
+        {icon}
+        <span className="text-xs font-bold uppercase tracking-wider">
+          {label}
+        </span>
+      </div>
+      <p className="text-sm font-semibold text-foreground truncate">
+        {value || "Unassigned"}
+      </p>
+    </div>
+  );
+}

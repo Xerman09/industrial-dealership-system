@@ -258,7 +258,7 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
       quantity: 1,
       cost_per_item: 0,
       life_span: 5,
-      date_acquired: new Date(), // ✅ Add this
+      date_acquired: new Date(),
       department: 0,
       employee: null,
     });
