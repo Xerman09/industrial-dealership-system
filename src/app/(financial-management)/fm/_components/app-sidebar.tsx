@@ -25,12 +25,12 @@ import {
 
 const data = {
   navMain: [
-    {
+    /*{
       title: "Dashboard",
       url: "/fm/",
       icon: BookOpen,
       isActive: true,
-    },
+    },*/
     {
       title: "Asset Management",
       url: "/fm/asset-management",
