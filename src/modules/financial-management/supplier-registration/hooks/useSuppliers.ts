@@ -14,7 +14,12 @@ import { Supplier } from "@/modules/financial-management/supplier-registration/t
 export function useSuppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<{
+    hasError: boolean;
+    message?: string;
+  }>({
+    hasError: false,
+  });
   const [searchQuery, setSearchQuery] = useState("");
 
   /**
@@ -23,7 +28,7 @@ export function useSuppliers() {
   const fetchSuppliers = useCallback(async (search?: string) => {
     try {
       setIsLoading(true);
-      setError(null);
+      setError({ hasError: false });
 
       const params = new URLSearchParams();
       if (search && search.trim() !== "") {
@@ -39,8 +44,11 @@ export function useSuppliers() {
 
       const result = await response.json();
       setSuppliers(result.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Unknown error"));
+    } catch (err: any) {
+      setError({
+        hasError: true,
+        message: err.message || "Could not load asset records.",
+      });
       setSuppliers([]);
     } finally {
       setIsLoading(false);
