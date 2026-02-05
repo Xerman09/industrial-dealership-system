@@ -93,19 +93,14 @@ export function SupplierDetailsModal({
               <DialogTitle className="text-xl font-bold mb-2">
                 {supplier.supplier_name}
               </DialogTitle>
-              <div className="flex flex-1 gap-4">
+              <div className="flex flex-1 gap-2">
+                <Badge variant="secondary" className="rounded-sm">
+                  {supplier.supplier_type}
+                </Badge>
                 <div className="flex items-center text-muted-foreground">
                   <Hash className="h-4 w-4" />
                   <span>TIN: {supplier.tin_number}</span>
                 </div>
-                <Badge variant="secondary" className="rounded-sm">
-                  {supplier.supplier_type}
-                </Badge>
-                <Badge
-                  variant={supplier.isActive === 1 ? "default" : "secondary"}
-                >
-                  {supplier.isActive === 1 ? "Active" : "Inactive"}
-                </Badge>
               </div>
             </div>
           </div>
@@ -124,7 +119,17 @@ export function SupplierDetailsModal({
                     </span>
                   </div>
                   <div>
-                    <h4 className="font-medium">{supplier.supplier_name}</h4>
+                    <div className="flex font-medium">
+                      <span className="mr-4"> {supplier.supplier_name}</span>
+                      <Badge
+                        className="text-xs"
+                        variant={
+                          supplier.isActive === 1 ? "default" : "secondary"
+                        }
+                      >
+                        {supplier.isActive === 1 ? "ACTIVE" : "INACTIVE"}
+                      </Badge>
+                    </div>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="flex items-center gap-1.5 text-sm">
                         <Phone className="h-4 w-4 text-muted-foreground" />
@@ -152,7 +157,7 @@ export function SupplierDetailsModal({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all z-20 mr-1"
+                    className="h-12 w-12 rounded-full border border-dashed hover:text-blue-600 transition-all z-20 mr-1"
                     onClick={() => setShowAddRepForm(!showAddRepForm)}
                   >
                     <Plus className="h-5 w-5" />
@@ -174,14 +179,11 @@ export function SupplierDetailsModal({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="relative h-12 w-12 rounded-full bg-slate-800 border-2 border-white flex items-center justify-center text-white text-xs font-bold cursor-pointer hover:bg-slate-700 transition-colors z-10">
+                              <div className="relative h-12 w-12 rounded-full bg-muted-foreground border-2 border-white flex items-center justify-center text-white text-xs font-bold cursor-pointer  z-10">
                                 +{representatives.length - 5}
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent
-                              side="bottom"
-                              className="p-3 bg-slate-900 border-none rounded-xl"
-                            >
+                            <TooltipContent side="bottom">
                               <div className="space-y-2">
                                 {representatives.slice(5).map((rep) => (
                                   <div
@@ -213,20 +215,14 @@ export function SupplierDetailsModal({
             </CardHeader>
             <CardContent className="space-y-6 ">
               <div className="border p-5 rounded-sm">
-                <p className="text-sm font-semibold uppercase mb-2 flex items-center gap-1.5 text-muted-foreground">
-                  Placeholder
+                <p className="text-sm font-semibold mb-2 flex items-center gap-1.5 text-muted-foreground">
+                  Comments
                 </p>
                 <p className="text-sm font-sans font-medium">
-                  {supplier.address ||
-                  supplier.city ||
-                  supplier.state_province ? (
-                    <>
-                      {supplier.address}, {supplier.brgy}, {supplier.city},{" "}
-                      {supplier.state_province} {supplier.postal_code},{" "}
-                      {supplier.country}
-                    </>
+                  {supplier.notes_or_comments ? (
+                    supplier.notes_or_comments
                   ) : (
-                    <EmptyInfo  message="The complete physical office location and mailing address for this supplier have not yet been documented." />
+                    <EmptyInfo message="The complete physical office location and mailing address for this supplier have not yet been documented." />
                   )}
                 </p>
               </div>
@@ -238,8 +234,12 @@ export function SupplierDetailsModal({
                   </span>
                   <span className="gap-2 capitalize">
                     <p>
-                      {supplier.address || "The complete physical office location and mailing address for this supplier have not yet been documented."}
-                      {supplier.postal_code || ""}
+                      {supplier.address ? (
+                        supplier.address
+                      ) : (
+                        <EmptyInfo message="No address has been registered" />
+                      )}
+                      {supplier.postal_code}
                     </p>
                   </span>
                 </div>
@@ -249,10 +249,10 @@ export function SupplierDetailsModal({
                     Payment & Delivery
                   </span>
                   <span className="flex gap-2">
-                    <Badge variant="secondary" className="rounded-sm">
+                    <Badge variant="secondary">
                       {supplier.payment_terms || "Unavailable"}
                     </Badge>
-                    <Badge variant="secondary" className="rounded-sm">
+                    <Badge variant="secondary">
                       {supplier.delivery_terms || "Unavailable"}
                     </Badge>
                   </span>
