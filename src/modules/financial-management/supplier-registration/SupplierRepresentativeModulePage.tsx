@@ -12,9 +12,11 @@ import { toast } from "sonner";
 import { EditSupplierModal } from "./components/modals/edit-supplier-modal";
 import { SupplierTableSkeleton } from "./components/data-table/table-skeleton-loader";
 import { AddSupplierModal } from "./components/modals/add-supplier-modal";
+import { ErrorPage } from "@/app/(financial-management)/fm/_components/ErrorPage";
 
 export default function SupplierRepresentativeModulePage() {
-  const { suppliers, isLoading, refresh, setSearchQuery } = useSuppliers();
+  const { suppliers, isLoading, error, refresh, setSearchQuery } =
+    useSuppliers();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null,
   );
@@ -60,6 +62,18 @@ export default function SupplierRepresentativeModulePage() {
     return (
       <div className="p-6">
         <SupplierTableSkeleton />
+      </div>
+    );
+  }
+
+  if (error.hasError) {
+    return (
+      <div>
+        <ErrorPage
+          title="Data Connection Error"
+          message={error.message}
+          onRefresh={refresh}
+        />
       </div>
     );
   }
