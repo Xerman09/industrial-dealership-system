@@ -10,7 +10,12 @@ import { Product } from "../types/product.schema";
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<{
+    hasError: boolean;
+    message?: string;
+  }>({
+    hasError: false,
+  });
   const [searchQuery, setSearchQuery] = useState("");
 
   /**
@@ -19,18 +24,22 @@ export function useProducts() {
   const fetchProducts = useCallback(async (search?: string) => {
     try {
       setIsLoading(true);
-      setError(null);
+      setError({ hasError: false, message: "" });
 
-      let data;
-      if (search && search.trim() !== "") {
-        data = await searchProducts(search.trim());
-      } else {
-        data = await fetchAllProducts();
-      }
+      // CALL THE BRIDGE, NOT THE SERVICE
+      const url = new URL(
+        "/api/supplier-registration/products",
+        window.location.origin,
+      );
+      if (search) url.searchParams.append("search", search);
 
-      setProducts(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Unknown error"));
+      const response = await fetch(url.toString());
+      if (!response.ok) throw new Error(`Server returned ${response.status}`);
+
+      const result = await response.json();
+      setProducts(result.data || []);
+    } catch (err: any) {
+      setError({ hasError: true, message: err.message });
       setProducts([]);
     } finally {
       setIsLoading(false);

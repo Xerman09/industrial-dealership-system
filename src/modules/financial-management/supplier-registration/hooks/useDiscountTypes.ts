@@ -20,7 +20,19 @@ export function useDiscountTypes() {
       setIsLoading(true);
       setError(null);
 
-      const data = await fetchAllDiscountTypes();
+      const apiUrl = "/api/supplier-registration/discount_types";
+
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch discount types: ${response.statusText}`,
+        );
+      }
+
+      const result = await response.json();
+
+      const data = result.data || [];
       setDiscountTypes(data);
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Unknown error"));

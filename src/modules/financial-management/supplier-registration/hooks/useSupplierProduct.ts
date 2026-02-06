@@ -28,8 +28,17 @@ export function useSupplierProducts(supplierId: number | null) {
       setIsLoading(true);
       setError(null);
 
-      const data = await fetchSupplierProducts(id);
-      setProducts(data);
+      // DEBUGGER
+      const apiUrl = `/api/supplier-registration/suppliers/${id}/products`;
+
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch products from API bridge");
+      }
+
+      const result = await response.json();
+      setProducts(result.data);
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Unknown error"));
       setProducts([]);
@@ -43,31 +52,33 @@ export function useSupplierProducts(supplierId: number | null) {
    */
   const addProduct = useCallback(
     async (productId: number, discountType: number | null = null) => {
-      if (!supplierId) {
-        toast.error("Supplier ID is required");
-        return false;
-      }
-
+      if (!supplierId) return false;
       try {
-        // Check if product already exists
-        const exists = await isProductAlreadyAdded(supplierId, productId);
-        if (exists) {
-          toast.error("This product is already assigned to this supplier");
+        // Logic: The API route already handles the "isProductAlreadyAdded" check server-side
+        const response = await fetch(
+          `/api/supplier-registration/suppliers/${supplierId}/products`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              product_id: productId,
+              discount_type: discountType,
+            }),
+          },
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          toast.error(result.error || "Failed to add product");
           return false;
         }
-
-        await addProductToSupplier({
-          supplier_id: supplierId,
-          product_id: productId,
-          discount_type: discountType,
-        });
 
         toast.success("Product added successfully");
         await fetchProducts(supplierId);
         return true;
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
-        toast.error(errorMsg);
+        toast.error("An error occurred while adding the product");
         return false;
       }
     },
@@ -78,20 +89,24 @@ export function useSupplierProducts(supplierId: number | null) {
    * Update discount type for product
    */
   const updateDiscount = useCallback(
-    async (productPerSupplierId: number, discountType: number | null) => {
-      if (!supplierId) {
-        toast.error("Supplier ID is required");
-        return false;
-      }
-
+    async (itemId: number, discountType: number | null) => {
+      if (!supplierId) return false;
       try {
-        await updateProductDiscount(productPerSupplierId, discountType);
+        const response = await fetch(
+          `/api/supplier-registration/products-per-supplier/${itemId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ discount_type: discountType }),
+          },
+        );
+
+        if (!response.ok) throw new Error("Update failed");
         toast.success("Discount type updated");
         await fetchProducts(supplierId);
         return true;
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
-        toast.error(errorMsg);
+        toast.error("Failed to update discount");
         return false;
       }
     },
@@ -102,20 +117,22 @@ export function useSupplierProducts(supplierId: number | null) {
    * Remove product from supplier
    */
   const removeProduct = useCallback(
-    async (productPerSupplierId: number) => {
-      if (!supplierId) {
-        toast.error("Supplier ID is required");
-        return false;
-      }
-
+    async (itemId: number) => {
+      if (!supplierId) return false;
       try {
-        await removeProductFromSupplier(productPerSupplierId);
-        toast.success("Product removed successfully");
+        const response = await fetch(
+          `/api/supplier-registration/products-per-supplier/${itemId}`,
+          {
+            method: "DELETE",
+          },
+        );
+
+        if (!response.ok) throw new Error("Delete failed");
+        toast.success("Product removed");
         await fetchProducts(supplierId);
         return true;
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
-        toast.error(errorMsg);
+        toast.error("Failed to remove product");
         return false;
       }
     },

@@ -1,29 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  fetchSupplierById,
   updateSupplier,
+  // deleteSupplier,
+  fetchSupplierById, // Assuming you have these in your supplier service
 } from "@/modules/financial-management/supplier-registration/services/supplier";
-import { SupplierFormSchema } from "@/modules/financial-management/supplier-registration/types/supplier.schema";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/suppliers/[id]
+ * GET: Fetch a single supplier's details
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: rawId } = await params; // Await the promise
-    const id = parseInt(rawId);
-
-    if (isNaN(id)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid ID" },
-        { status: 400 },
-      );
-    }
-
-    const supplier = await fetchSupplierById(id);
-    return NextResponse.json({ success: true, data: supplier });
+    const { id } = await params;
+    const data = await fetchSupplierById(parseInt(id));
+    return NextResponse.json({ success: true, data });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -33,25 +24,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * PATCH /api/suppliers/[id]
+ * PATCH: This fixes your 405 error when editing a supplier!
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: rawId } = await params; // Await the promise
-    const id = parseInt(rawId);
-
-    if (isNaN(id))
-      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-
+    const { id } = await params;
     const body = await request.json();
-    const validatedData = SupplierFormSchema.partial().parse(body);
-    const updatedSupplier = await updateSupplier(id, validatedData);
 
-    return NextResponse.json({ success: true, data: updatedSupplier });
+    // Call the service to update Directus
+    const result = await updateSupplier(parseInt(id), body);
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+      message: "Supplier updated successfully",
+    });
   } catch (error: any) {
+    console.error("PATCH Supplier Error:", error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error.message || "Failed to update supplier" },
       { status: 500 },
     );
   }
 }
+
+/**
+ * DELETE: Remove a supplier
+ */
+// export async function DELETE(request: NextRequest, { params }: RouteParams) {
+//   try {
+//     const { id } = await params;
+//     await deleteSupplier(parseInt(id));
+//     return NextResponse.json({ success: true, message: "Supplier deleted" });
+//   } catch (error: any) {
+//     return NextResponse.json(
+//       { success: false, error: error.message },
+//       { status: 500 },
+//     );
+//   }
+// }

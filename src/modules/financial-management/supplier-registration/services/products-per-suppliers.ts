@@ -4,7 +4,6 @@ import {
   ProductsPerSupplierResponse,
   ProductPerSupplierResponse,
 } from "../types/product-per-suppplier.schema";
-
 /**
  * Base Directus API URL
  */
@@ -14,10 +13,21 @@ const API_BASE = `${API_BASE_URL}/items`;
 /**
  * Get headers with authentication token
  */
-const getHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${process.env.DIRECTUS_STATIC_TOKEN}`,
-});
+const getHeaders = () => {
+  const token = process.env.DIRECTUS_STATIC_TOKEN;
+
+  // DEBUGGER: Check if token is missing on the server
+  if (!token) {
+    console.error(
+      "[SERVER ERROR] DIRECTUS_STATIC_TOKEN is undefined in environment variables.",
+    );
+  }
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+};
 
 /**
  * Fetch all products for a specific supplier with product details
@@ -26,41 +36,62 @@ export async function fetchSupplierProducts(
   supplierId: number,
 ): Promise<ProductPerSupplierWithDetails[]> {
   try {
-    const filter = {
-      supplier_id: { _eq: supplierId },
-    };
+    const filter = { supplier_id: { _eq: supplierId } };
+    const fields =
+      "id,supplier_id,product_id,discount_type,product_id.product_name,product_id.product_code";
 
-    // Fetch products_per_supplier with product details joined
-    const response = await fetch(
-      `${API_BASE}/products_per_supplier?limit=-1&fields=id,supplier_id,product_id,discount_type,product_id.product_name,product_id.product_code&filter=${encodeURIComponent(
-        JSON.stringify(filter),
-      )}`,
-      {
-        method: "GET",
-        headers: getHeaders(),
-        cache: "no-store",
-      },
-    );
+    const url = `${API_BASE}/product_per_supplier?limit=-1&fields=${fields}&filter=${encodeURIComponent(
+      JSON.stringify(filter),
+    )}`;
+
+    // DEBUGGER: Check the exact URL being constructed
+    console.log(`[SERVER FETCH] Requesting Supplier ID: ${supplierId}`);
+    console.log(`[SERVER FETCH] URL: ${url}`);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: getHeaders(),
+      cache: "no-store",
+    });
 
     if (!response.ok) {
+      // DEBUGGER: Get the actual error message from Directus
+      const errorBody = await response.json().catch(() => ({}));
+      console.error(
+        "[SERVER ERROR] Directus Response:",
+        response.status,
+        errorBody,
+      );
+
       throw new Error(
-        `Failed to fetch supplier products: ${response.statusText}`,
+        `Directus Error: ${response.statusText} - ${JSON.stringify(errorBody)}`,
       );
     }
 
     const result = await response.json();
 
-    // Transform nested product data to flat structure
     return (result.data || []).map((item: any) => ({
       id: item.id,
       supplier_id: item.supplier_id,
-      product_id: item.product_id?.product_id || item.product_id,
+      product_id:
+        typeof item.product_id === "object"
+          ? item.product_id.product_id // Check if this field name is correct in Directus!
+          : item.product_id,
       discount_type: item.discount_type,
-      product_name: item.product_id?.product_name || "Unknown Product",
-      product_code: item.product_id?.product_code || null,
+      product_name:
+        typeof item.product_id === "object"
+          ? item.product_id.product_name
+          : "Unknown Product",
+      product_code:
+        typeof item.product_id === "object"
+          ? item.product_id.product_code
+          : null,
     }));
-  } catch (error) {
-    console.error(`Error fetching products for supplier ${supplierId}:`, error);
+  } catch (error: any) {
+    console.error(
+      `[SERVER FATAL] Error for supplier ${supplierId}:`,
+      error.message,
+    );
     throw error;
   }
 }
@@ -72,7 +103,7 @@ export async function addProductToSupplier(
   data: Omit<ProductPerSupplier, "id">,
 ): Promise<ProductPerSupplier> {
   try {
-    const response = await fetch(`${API_BASE}/products_per_supplier`, {
+    const response = await fetch(`${API_BASE}/product_per_supplier`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -101,7 +132,7 @@ export async function updateProductDiscount(
   discountType: number | null,
 ): Promise<ProductPerSupplier> {
   try {
-    const response = await fetch(`${API_BASE}/products_per_supplier/${id}`, {
+    const response = await fetch(`${API_BASE}/product_per_supplier/${id}`, {
       method: "PATCH",
       headers: getHeaders(),
       body: JSON.stringify({ discount_type: discountType }),
@@ -127,7 +158,7 @@ export async function updateProductDiscount(
  */
 export async function removeProductFromSupplier(id: number): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE}/products_per_supplier/${id}`, {
+    const response = await fetch(`${API_BASE}/product_per_supplier/${id}`, {
       method: "DELETE",
       headers: getHeaders(),
     });
@@ -160,7 +191,7 @@ export async function isProductAlreadyAdded(
     };
 
     const response = await fetch(
-      `${API_BASE}/products_per_supplier?limit=1&fields=id&filter=${encodeURIComponent(
+      `${API_BASE}/product_per_supplier?limit=1&fields=id&filter=${encodeURIComponent(
         JSON.stringify(filter),
       )}`,
       {
