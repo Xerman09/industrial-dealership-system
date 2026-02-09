@@ -15,6 +15,10 @@ export const assetService = {
   getDepartments: () => apiRequest(`${API_ROUTE}?type=departments`),
 
   getUsers: () => apiRequest(`${API_ROUTE}?type=users`),
+  
+  getItemTypes: () => apiRequest(`${API_ROUTE}?type=item_types`),
+  
+  getItemClassifications: () => apiRequest(`${API_ROUTE}?type=item_classifications`),
 
   getAssets: () => apiRequest(API_ROUTE),
 

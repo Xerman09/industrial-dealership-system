@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { assetService } from "@/modules/financial-management/asset-management/services/assetService";
 import {
   assetFormSchema,
   AssetFormValues,
@@ -114,17 +115,12 @@ export default function AddAssetModal({ onSuccess }: AddAssetModalProps) {
     if (open) {
       const fetchData = async () => {
         try {
-          const [depRes, userRes, typeRes, classRes] = await Promise.all([
-            fetch("/api/fm/asset-management?type=departments"),
-            fetch("/api/fm/asset-management?type=users"),
-            fetch("/api/fm/asset-management?type=item_types"),
-            fetch("/api/fm/asset-management?type=item_classifications"),
+          const [depData, userData, typeData, classData] = await Promise.all([
+            assetService.getDepartments(),
+            assetService.getUsers(),
+            assetService.getItemTypes(),
+            assetService.getItemClassifications(),
           ]);
-
-          const depData = await depRes.json();
-          const userData = await userRes.json();
-          const typeData = await typeRes.json();
-          const classData = await classRes.json();
 
           setDepartments(Array.isArray(depData) ? depData : []);
           setUsers(Array.isArray(userData) ? userData : []);

@@ -142,12 +142,8 @@ export default function EditAssetModal({
           const [depData, userData, typeData, classData] = await Promise.all([
             assetService.getDepartments(),
             assetService.getUsers(),
-            fetch("/api/fm/asset-management?type=item_types").then((res) =>
-              res.json(),
-            ),
-            fetch("/api/fm/asset-management?type=item_classifications").then(
-              (res) => res.json(),
-            ),
+            assetService.getItemTypes(),
+            assetService.getItemClassifications(),
           ]);
 
           setDepartments(depData);

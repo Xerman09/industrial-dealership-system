@@ -14,21 +14,16 @@ import { formatPHP, getDepreciatedValue } from "./utils/lib";
 import { AssetTableSkeleton } from "./components/data-table/skeleton-loader";
 import { ErrorPage } from "@/app/(financial-management)/fm/_components/ErrorPage";
 
+// Hooks
+import { useAssets } from "./hooks/useAssets";
+
 // Modals
 import AddAssetModal from "./components/modals/AddAssetModal";
 import AssetViewModal from "./components/modals/AssetViewModal";
 import AssetEditModal from "./components/modals/EditAssetModal";
 
 export default function AssetManagementModulePage() {
-  // --- State Management ---
-  const [data, setData] = useState<AssetTableData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorState, setErrorState] = useState<{
-    hasError: boolean;
-    message?: string;
-  }>({
-    hasError: false,
-  });
+  const { assets: data, isLoading: loading, error: errorState, refresh: fetchAssets } = useAssets();
 
   // Table & Filter State
   const [projectionDate, setProjectionDate] = useState<Date>(new Date());
@@ -40,38 +35,6 @@ export default function AssetManagementModulePage() {
   );
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-
-  // --- Data Fetching ---
-  const fetchAssets = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErrorState({ hasError: false });
-
-      const response = await fetch("/api/fm/asset-management");
-      if (!response.ok) throw new Error("Failed to fetch data from server");
-
-      const result = await response.json();
-
-      // [Guard Clause] Avoiding the .reduce crash if result is not an array
-      if (!Array.isArray(result))
-        throw new Error("Invalid data format received");
-
-      setData(result);
-    } catch (err: any) {
-      console.error(err);
-      setErrorState({
-        hasError: true,
-        message: err.message || "Could not load asset records.",
-      });
-      toast.error("Failed to load assets.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAssets();
-  }, [fetchAssets]);
 
   // --- Memoized Calculations ---
   const totalValue = useMemo(() => {
