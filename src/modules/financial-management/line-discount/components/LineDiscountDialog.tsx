@@ -27,10 +27,14 @@ import {
 
 const schema = z.object({
   line_discount: z.string().trim().min(1, "Code is required."),
-  percentage: z.coerce
-    .number()
-    .min(0, "Must be at least 0.00")
-    .max(99.99, "Must be at most 99.99"),
+  percentage: z.any()
+    .refine((val) => val !== "" && val !== null && val !== undefined, "Percentage is required.")
+    .transform((val) => Number(val))
+    .pipe(
+      z.number({ message: "Percentage is required." })
+        .min(0, "Must be at least 0.00")
+        .max(99.99, "Must be at most 99.99")
+    ),
   description: z.string().trim().nullable().optional(),
 });
 
