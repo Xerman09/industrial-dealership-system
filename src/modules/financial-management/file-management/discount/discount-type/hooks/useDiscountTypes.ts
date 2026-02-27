@@ -13,6 +13,15 @@ export function useDiscountTypes() {
 
   const [open, setOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<DiscountTypeRow | null>(null);
+  const [search, setSearch] = React.useState("");
+
+  const filteredRows = React.useMemo(() => {
+    if (!search) return rows;
+    const lower = search.toLowerCase();
+    return rows.filter((r) =>
+      (r.discount_type || "").toLowerCase().includes(lower)
+    );
+  }, [rows, search]);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -77,6 +86,9 @@ export function useDiscountTypes() {
     open,
     setOpen,
     editing,
+    search,
+    setSearch,
+    filteredRows,
     onCreate,
     onEdit,
     save,

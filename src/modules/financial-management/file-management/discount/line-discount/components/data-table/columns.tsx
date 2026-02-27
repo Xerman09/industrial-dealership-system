@@ -2,7 +2,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { EllipsisVertical, SquarePen, Trash2 } from "lucide-react";
+import { EllipsisVertical, SquarePen } from "lucide-react";
 
 import type { LineDiscountRow } from "../../type";
 import { DataTableColumnHeader } from "./table-column-header";
@@ -64,14 +64,6 @@ export const columns: ColumnDef<LineDiscountRow>[] = [
             <DropdownMenuItem onClick={() => meta?.onEdit?.(row.original)}>
               <SquarePen className="mr-2 h-4 w-4" />
               Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => meta?.onDelete?.(row.original)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

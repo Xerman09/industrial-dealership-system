@@ -17,7 +17,7 @@ function errMsg(payload: any, fallback: string) {
 }
 
 export async function listLineDiscounts(): Promise<LineDiscountRow[]> {
-  const res = await fetch("/api/fm/line-discount?limit=-1", { cache: "no-store" });
+  const res = await fetch("/api/fm/file-management/discount/line-discount?limit=-1", { cache: "no-store" });
   const payload = await safeJson(res);
 
   if (!res.ok) throw new Error(errMsg(payload, "Failed to load line discounts."));
@@ -25,7 +25,7 @@ export async function listLineDiscounts(): Promise<LineDiscountRow[]> {
 }
 
 export async function createLineDiscount(input: LineDiscountUpsert): Promise<LineDiscountRow> {
-  const res = await fetch("/api/fm/line-discount", {
+  const res = await fetch("/api/fm/file-management/discount/line-discount", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -42,7 +42,7 @@ export async function updateLineDiscount(
   id: number,
   input: LineDiscountUpsert,
 ): Promise<LineDiscountRow> {
-  const res = await fetch(`/api/fm/line-discount?id=${encodeURIComponent(String(id))}`, {
+  const res = await fetch(`/api/fm/file-management/discount/line-discount?id=${encodeURIComponent(String(id))}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -54,7 +54,7 @@ export async function updateLineDiscount(
 }
 
 export async function deleteLineDiscount(id: number): Promise<void> {
-  const res = await fetch(`/api/fm/line-discount?id=${encodeURIComponent(String(id))}`, {
+  const res = await fetch(`/api/fm/file-management/discount/line-discount?id=${encodeURIComponent(String(id))}`, {
     method: "DELETE",
   });
 
