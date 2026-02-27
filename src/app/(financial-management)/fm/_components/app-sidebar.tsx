@@ -9,6 +9,7 @@ import {
   Command,
   Settings2,
   SquareTerminal,
+  FileAxis3d,
 } from "lucide-react";
 
 import { NavMain } from "./nav-main";
@@ -46,18 +47,25 @@ const data = {
       // items: [{ title: "Purchase Order", url: "/scm/supplier-management/purchase-order" }],
     },
     {
-      title: "Line Discount",
-      url: "/fm/line-discount",
-      icon: SquareTerminal,
-      isActive: true,
-      // items: [{ title: "Purchase Order", url: "/scm/supplier-management/purchase-order" }],
-    },
-    {
-      title: "Discount Type",
-      url: "/fm/discount-type",
-      icon: SquareTerminal,
-      isActive: true,
-      // items: [{ title: "Purchase Order", url: "/scm/supplier-management/purchase-order" }],
+      title: "File Management",
+      url: "#",
+      icon: FileAxis3d,
+      items: [
+        {
+          title: "Discount",
+          url: "#",
+          items: [
+            {
+              title: "Discount Type",
+              url: "/fm/file-management/discount/discount-type",
+            },
+            {
+              title: "Line Discount",
+              url: "/fm/file-management/discount/line-discount",
+            },
+          ],
+        },
+      ],
     },
     {
       title: "Supplier Registration",

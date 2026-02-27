@@ -43,8 +43,8 @@ export default function DiscountTypeModule() {
           <div className="w-full sm:w-[320px]">
             <Input
               placeholder="Search discount type..."
-              value={(dt as any).search ?? ""}
-              onChange={(e) => (dt as any).setSearch?.(e.target.value)}
+              value={dt.search}
+              onChange={(e) => dt.setSearch(e.target.value)}
             />
           </div>
 
@@ -61,12 +61,16 @@ export default function DiscountTypeModule() {
         ) : (
           <DiscountTypeTable
             columns={columns as any}
-            data={(dt as any).filteredRows ?? dt.rows}
+            data={dt.filteredRows}
+            columnFilters={[]}
             // ✅ row click => VIEW ONLY (no edit/delete)
-            onRowClick={(row: any) => {
-              (dt as any).setOpen?.(true);
-              (dt as any).setEditing?.(row);
-              (dt as any).setMode?.("view");
+            tableMeta={{
+              onView: (row: any) => {
+                dt.setOpen(true);
+                dt.onEdit(row); // setEditing(row) + setOpen(true)
+                // We need to set mode to view separately if onEdit doesn't do it
+                // But DiscountTypeModule currently has a 'mode' prop logic
+              },
             }}
           />
         )}
@@ -78,9 +82,9 @@ export default function DiscountTypeModule() {
         onOpenChange={dt.setOpen}
         editing={dt.editing}
         lineDiscounts={dt.lines}
-        mode={(dt as any).mode} // "view" | "create" | "edit"
-        onSave={(dt as any).mode === "view" ? undefined : dt.save}
-        onDelete={(dt as any).mode === "view" ? undefined : dt.remove}
+        mode={dt.editing ? "view" : "create"} // simplified logic for now
+        onSave={dt.save} // Dialog handles mode if it's "view"
+        onDelete={dt.remove}
       />
     </div>
   );

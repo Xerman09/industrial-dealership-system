@@ -13,7 +13,6 @@ import { LineDiscountDataTable } from "./components/data-table";
 import { LineDiscountTableSkeleton } from "./components/data-table/skeleton-loader";
 
 import LineDiscountDialog from "./components/LineDiscountDialog";
-import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 
 export default function LineDiscountModule() {
   const { rows, loading, create, update, remove } = useLineDiscounts();
@@ -22,7 +21,6 @@ export default function LineDiscountModule() {
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const [selected, setSelected] = React.useState<LineDiscountRow | null>(null);
 
@@ -56,10 +54,6 @@ export default function LineDiscountModule() {
                   setSelected(row);
                   setEditOpen(true);
                 },
-                onDelete: (row: LineDiscountRow) => {
-                  setSelected(row);
-                  setDeleteOpen(true);
-                },
               }}
             />
           )}
@@ -87,17 +81,7 @@ export default function LineDiscountModule() {
         }}
       />
 
-      {/* Delete */}
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete line discount?"
-        description={`This will permanently delete "${selected?.line_discount ?? ""}". This action cannot be undone.`}
-        onConfirm={async () => {
-          if (!selected) return;
-          await remove(selected.id);
-        }}
-      />
+
     </div>
   );
 }

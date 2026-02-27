@@ -1,4 +1,4 @@
-// src/app/(financial-management)/fm/discount-type/page.tsx
+// src/app/(financial-management)/fm/file-management/discount/line-discount/page.tsx
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -10,8 +10,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { NavUser } from "../_components/nav-user";
-import { DiscountTypeModule } from "@/modules/financial-management/discount-type";
+import { NavUser } from "../../../_components/nav-user";
+import { LineDiscountModule } from "@/modules/financial-management/file-management/discount/line-discount";
+
 
 import { cookies } from "next/headers";
 
@@ -104,8 +105,16 @@ export default async function Page() {
                                 <BreadcrumbLink href="#">FM</BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden md:block" />
+                            <BreadcrumbItem className="hidden md:block">
+                                <BreadcrumbLink href="#">File Management</BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator className="hidden md:block" />
+                            <BreadcrumbItem className="hidden md:block">
+                                <BreadcrumbLink href="#">Discount</BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator className="hidden md:block" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Chart Of Accounts</BreadcrumbPage>
+                                <BreadcrumbPage>Line Discount</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -118,7 +127,7 @@ export default async function Page() {
 
             <ScrollArea className="min-h-0 flex-1">
                 <div className="p-4">
-                    <DiscountTypeModule />
+                    <LineDiscountModule />
                 </div>
             </ScrollArea>
         </div>
