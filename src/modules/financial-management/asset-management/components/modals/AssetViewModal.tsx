@@ -3,8 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { formatPHP } from "@/lib/utils";
-import { getDepreciatedValue } from "@/modules/financial-management/asset-management/utils/lib";
+import { formatPHP, getDepreciatedValue } from "../../utils/lib";
 import {
   Barcode,
   Building,

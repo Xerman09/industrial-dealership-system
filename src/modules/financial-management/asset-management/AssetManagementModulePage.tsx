@@ -12,7 +12,7 @@ import { AssetTableData } from "./types";
 import { AssetDataTable } from "./components/data-table";
 import { DataTableSkeleton } from "@/app/(financial-management)/fm/_components/DataTableSkeleton";
 import { ErrorPage } from "@/app/(financial-management)/fm/_components/ErrorPage";
-import { formatPHP } from "@/lib/utils";
+import { formatPHP } from "./utils/lib";
 import { getDepreciatedValue } from "./utils/lib";
 
 // Hooks

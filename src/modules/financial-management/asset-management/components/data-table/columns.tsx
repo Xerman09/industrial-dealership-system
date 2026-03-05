@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatPHP } from "@/lib/utils";
+import { formatPHP } from "../../utils/lib";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   AlertTriangle,
@@ -231,10 +231,10 @@ export const columns: ColumnDef<AssetTableData>[] = [
           <span className="text-xs font-medium">
             {date
               ? new Intl.DateTimeFormat("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                }).format(new Date(date))
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              }).format(new Date(date))
               : "—"}
           </span>
         </div>

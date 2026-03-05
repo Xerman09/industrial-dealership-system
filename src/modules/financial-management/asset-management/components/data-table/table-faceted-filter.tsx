@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Check, PlusCircle } from "lucide-react";
 import { Column } from "@tanstack/react-table";
-import { cn } from "@/lib/utils";
+import { cn } from "../../utils/lib";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
