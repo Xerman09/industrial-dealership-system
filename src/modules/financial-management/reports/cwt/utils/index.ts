@@ -1,4 +1,4 @@
-// utils/index.ts
+// cwt/utils/index.ts
 // Data transform and chart-build helpers for the CWT module.
 import {
   RawCWTRow,
@@ -15,11 +15,13 @@ export function transformCWTRows(raw: RawCWTRow[]): CWTRecord[] {
     const dateRaw = item.transactionDate ?? '';
     const dateObj = dateRaw ? new Date(dateRaw) : new Date(0);
     return {
-      id: item.docNo ?? `CWT-${i + 1}`,
-      invoiceNo: item.docNo ?? `CWT-${i + 1}`,
-      customerName: item.supplier ?? '-',
-      invoiceDate: dateRaw,
-      displayAmount: Number(item.cwt ?? 0),
+      id:            item.docNo ?? `CWT-${i + 1}`,
+      invoiceNo:     item.docNo ?? `CWT-${i + 1}`,
+      customerName:  item.supplier    ?? '-',
+      invoiceDate:   dateRaw,
+      grossAmount:   Number(item.grossAmount   ?? 0),
+      taxableAmount: Number(item.taxableAmount ?? 0),
+      displayAmount: Number(item.cwt           ?? 0),
       dateObj,
     };
   });
@@ -31,8 +33,8 @@ export function buildPieData(records: CWTRecord[]): PieEntry[] {
   const map: Record<string, number> = {};
   records.forEach((r) => { map[r.customerName] = (map[r.customerName] ?? 0) + r.displayAmount; });
   const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
-  const top = sorted.slice(0, 6);
-  const rest = sorted.slice(6).reduce((s, [, v]) => s + v, 0);
+  const top    = sorted.slice(0, 6);
+  const rest   = sorted.slice(6).reduce((s, [, v]) => s + v, 0);
   const entries: PieEntry[] = top.map(([name, value]) => ({ name, value }));
   if (rest > 0) entries.push({ name: 'Others', value: rest });
   return entries;
@@ -53,7 +55,7 @@ export function buildBarData(records: CWTRecord[]): BarEntry[] {
   records.forEach((r) => {
     if (!map[r.customerName]) map[r.customerName] = { amount: 0, count: 0 };
     map[r.customerName].amount += r.displayAmount;
-    map[r.customerName].count += 1;
+    map[r.customerName].count  += 1;
   });
   return Object.entries(map)
     .map(([name, { amount, count }]) => ({ name, amount, count }))

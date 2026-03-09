@@ -1,4 +1,4 @@
-// utils/index.ts
+// vat-purchases/utils/index.ts
 // Pure utility functions for the VAT Purchases module — no React, no side effects.
 
 import type {
@@ -23,12 +23,17 @@ function extractVat(t: RawVATTransaction): number {
 
 /** Extract document/reference number — API now uses remarks */
 function extractDocNo(tr: RawVATTransaction, i: number): string {
-  return tr.remarks || tr.docNo || tr.documentNo || tr.id || `TR-${i + 1}`;
+  return String(tr.remarks ?? tr.docNo ?? tr.documentNo ?? tr.id ?? `TR-${i + 1}`);
+}
+
+/** Extract supplier name — ensure it's always a string */
+function extractSupplier(tr: RawVATTransaction): string {
+  return String(tr.supplier ?? tr.supplierName ?? '-');
 }
 
 /** Extract transaction date */
 function extractDate(t: RawVATTransaction): string {
-  return t.transactionDate || t.date || '-';
+  return String(t.transactionDate ?? t.date ?? '-');
 }
 
 /** Transform raw API transactions into clean VATTransaction objects */
@@ -37,7 +42,7 @@ export function transformTransactions(tx: RawVATTransaction[]): VATTransaction[]
     const rawAmount = extractVat(tr);
     return {
       id:           extractDocNo(tr, i),
-      supplier:     tr.supplier || tr.supplierName || '-',
+      supplier:     extractSupplier(tr),
       amount:       rawAmount ? formatPeso(rawAmount) : '-',
       vatExclusive: Number(tr.vatExclusive ?? 0),
       grossAmount:  Number(tr.grossAmount  ?? 0),
@@ -62,7 +67,7 @@ export function buildSupplierData(tx: RawVATTransaction[]): {
 } {
   const supplierMap: Record<string, number> = {};
   tx.forEach((t) => {
-    const supplier = t.supplier || t.supplierName || '-';
+    const supplier = extractSupplier(t);
     supplierMap[supplier] = (supplierMap[supplier] || 0) + extractVat(t);
   });
 

@@ -1,4 +1,4 @@
-// types.ts
+// ewt/types.ts
 // All TypeScript interfaces and types for the EWT module.
 
 export interface RawEWTRow {
@@ -12,16 +12,13 @@ export interface RawEWTRow {
   // Fallback aliases
   id?:            string;
   invoice_number?: string;
-  customer?: string;
-  customerName?: string;
-  client?: string;
-  ewt?: number | string;
-  amount?: number | string;
-  date?: string;
-  invoiceDate?: string;
-  createdAt?: string;
-  status?: string;
-  [key: string]: unknown;
+  customerName?:  string;
+  client?:        string;
+  amount?:        number | string;
+  date?:          string;
+  createdAt?:     string;
+  status?:        string;
+  [key: string]:  unknown;
 }
 
 export interface EWTRecord {
