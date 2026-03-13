@@ -23,7 +23,7 @@ import { formatPeso, COLORS } from './utils';
 import type { VATCustomerEntry, VATSaleBarEntry, VATSaleChartPoint, VATSaleMetrics } from './types';
 
 export default function VatSellingModule() {
-  const { loading, transactions, metrics, lineData, pieData, barData } = useVATSelling();
+  const { loading, transactions, metrics, pieData, barData } = useVATSelling();
 
   const [page, setPage]         = useState(1);
   const [dateFrom, setDateFrom] = useState('');
@@ -158,7 +158,7 @@ export default function VatSellingModule() {
     });
 
     // ── Grand Total box ────────────────────────────────────────────────────
-    const finalY = (doc as any).lastAutoTable.finalY ?? 36;
+    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY ?? 36;
     const boxW   = 110;
     const boxH   = 12;
     const boxX   = pageW - 14 - boxW;

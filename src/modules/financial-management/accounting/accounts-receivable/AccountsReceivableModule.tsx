@@ -6,11 +6,10 @@ import autoTable from 'jspdf-autotable';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { AlertCircle, Clock, PhilippinePeso, X, Download } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { AlertCircle, Clock, PhilippinePeso, X, Download } from 'lucide-react';
 import { useAccountsReceivable } from './hooks/useAccountsReceivable';
 import { MetricCard } from './components/MetricCard';
 import { AgingChart } from './components/AgingChart';
@@ -201,7 +200,7 @@ export default function AccountsReceivableModule() {
     });
 
     // ── Grand Total box ────────────────────────────────────────────────────
-    const finalY = (doc as any).lastAutoTable.finalY ?? 36;
+    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY ?? 36;
     const boxW   = 110;
     const boxH   = 12;
     const boxX   = pageW - 14 - boxW;
