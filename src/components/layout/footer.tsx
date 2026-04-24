@@ -20,7 +20,7 @@ export function Footer() {
                                 <Image src={vosLogo} alt="VOS" fill className="object-contain p-3 dark:invert-0 invert" />
                             </div>
                             <div className="text-3xl font-black tracking-tighter italic uppercase text-slate-900 dark:text-white">
-                                VOS-<span className="text-cyan-600 dark:text-cyan-500">WEB</span>
+                                IDS-<span className="text-cyan-600 dark:text-cyan-500">WEB</span>
                             </div>
                         </div>
                         <p className="max-w-md text-base font-medium text-slate-600 dark:text-white/40 leading-relaxed">
