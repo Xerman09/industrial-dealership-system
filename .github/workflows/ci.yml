@@ -1,10 +1,11 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch: # <--- Adds a "Run workflow" button in GitHub
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -43,3 +44,15 @@ jobs:
           DIRECTUS_STATIC_TOKEN: placeholder
           DIRECTUS_TOKEN: placeholder
           NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN: placeholder
+
+  deploy:
+    name: Deploy to Vertex Server
+    needs: ci 
+    # This rule allows both code pushes AND manual button clicks!
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    runs-on: self-hosted 
+
+    steps:
+      - name: Execute Deployment Script
+        run: |
+          /home/vertex-dev/system/ids_system/deploy.sh
