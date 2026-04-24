@@ -182,7 +182,7 @@ export default function LandingPage() {
                         className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-black uppercase tracking-[0.2em] mb-10 backdrop-blur-xl"
                     >
                         <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                        VOS-WEB-V2 // Next-Gen ERP Command Center
+                        IDS-WEB-V2 // Next-Gen ERP Command Center
                     </motion.div>
 
                     <motion.h1
@@ -191,7 +191,7 @@ export default function LandingPage() {
                         transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
                         className="text-5xl sm:text-6xl md:text-[7rem] font-black tracking-tighter mb-6 leading-[0.85] uppercase italic text-slate-900 dark:text-white"
                     >
-                        VOS-WEB: <br />
+                        IDS-WEB: <br />
                         <span className="text-cyan-600 dark:text-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.3)] pr-4 break-words">ERP CONTROL</span>
                     </motion.h1>
 
@@ -713,7 +713,7 @@ export default function LandingPage() {
             <div className="space-y-6">
                 <h3 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white">Ready to Deploy?</h3>
                 <p className="max-w-xl mx-auto text-slate-600 dark:text-white/50 text-xl font-medium">
-                    VOS-WEB-V2 is built for enterprise scale. <br />
+                    IDS-WEB-V2 is built for enterprise scale. <br />
                     HRM · Finance · SCM · CRM · BI · Audit — on a single platform.
                 </p>
             </div>

@@ -61,7 +61,7 @@ export function Footer() {
                             </div>
                             <div className="flex items-center gap-3 text-sm font-bold tracking-tight text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors group cursor-pointer">
                                 <Globe className="h-4 w-4 opacity-50 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 group-hover:opacity-100 transition-colors" />
-                                <span>vos-web.systems</span>
+                                <span>IDS-WEB.systems</span>
                             </div>
                         </div>
                     </div>
@@ -71,7 +71,7 @@ export function Footer() {
 
                 <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
                     <div className="text-xs font-black tracking-widest text-slate-600/50 dark:text-white/30 uppercase">
-                        © {new Date().getFullYear()} VOS-WEB CORE. All rights reserved.
+                        © {new Date().getFullYear()} IDS-WEB CORE. All rights reserved.
                     </div>
                     <div className="flex items-center gap-8 text-[10px] font-black tracking-widest uppercase text-slate-600/50 dark:text-white/30">
                         <Link href="#" className="hover:text-slate-900 dark:hover:text-white transition-colors">Privacy Policy</Link>
