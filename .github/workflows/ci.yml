@@ -5,7 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
-  workflow_dispatch: # <--- Adds a "Run workflow" button in GitHub
+  workflow_dispatch: # Allows you to click "Run workflow" manually in GitHub
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -27,16 +27,16 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci
 
-      - name: Lint
+      - name: Run Linting
         run: npx eslint . --max-warnings=0
 
-      - name: Typecheck
+      - name: Run Typecheck
         run: npm run typecheck
 
-      - name: Build
+      - name: Run Build (Verification)
         run: npm run build
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8055
@@ -48,7 +48,7 @@ jobs:
   deploy:
     name: Deploy to Vertex Server
     needs: ci 
-    # This rule allows both code pushes AND manual button clicks!
+    # Only deploys if CI passes AND it's a push to main (merge) or manual trigger
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: self-hosted 
 
