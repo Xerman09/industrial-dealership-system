@@ -55,7 +55,7 @@ export default function ServicesPage() {
                             transition={{ delay: 0.2 }}
                             className="max-w-3xl mx-auto text-xl font-medium text-slate-600 dark:text-white/40 leading-relaxed italic"
                         >
-                            Explore the technical core of the VOS-WEB-V2 ecosystem. From human capital dynamics to fiscal orchestration, each module is engineered for high-density information management and real-time operational oversight.
+                            Explore the technical core of the IDS-WEB-V2 ecosystem. From human capital dynamics to fiscal orchestration, each module is engineered for high-density information management and real-time operational oversight.
                         </motion.p>
                     </div>
                 </section>
@@ -160,7 +160,7 @@ export default function ServicesPage() {
                                 INTEGRATED <span className="text-cyan-500">SYNERGY</span>
                             </motion.h2>
                             <p className="max-w-2xl mx-auto text-lg text-slate-600 dark:text-white/40 font-medium italic">
-                                VOS-WEB-V2 operates as a single, cohesive engine where subsystems feed into one another in a continuous feedback loop.
+                                IDS-WEB-V2 operates as a single, cohesive engine where subsystems feed into one another in a continuous feedback loop.
                             </p>
                         </div>
 
