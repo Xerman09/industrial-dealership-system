@@ -59,21 +59,20 @@ export async function POST(req: NextRequest) {
       folderId = createdFolder.data?.id;
     }
 
-    // 4. Rebuild FormData with folder FIRST, then file (Directus requires this order)
-    const uploadFormData = new FormData();
+    // 4. Sequential FormData Injection (Metadata MUST come before the file)
+    const outgoingForm = new FormData();
+    
     if (folderId) {
-      uploadFormData.append("folder", folderId);
+      outgoingForm.append("folder", folderId);
     }
     
-    // Append all remaining fields from the original formData
-    for (const [key, value] of formData.entries()) {
-      uploadFormData.append(key, value);
-    }
+    // Append the file blob last
+    outgoingForm.append("file", file);
 
     const response = await fetch(`${DIRECTUS_URL}/files`, {
       method: "POST",
       headers: { Authorization: `Bearer ${DIRECTUS_TOKEN}` },
-      body: uploadFormData,
+      body: outgoingForm,
     });
 
     const result = await response.json();

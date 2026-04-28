@@ -7,9 +7,11 @@ import { useLookups } from "../hooks/useLookups";
 import type { MatrixRow, FilterState, ProductRow, VariantCell } from "../types";
 import PrintablesFiltersBar from "./PrintablesFiltersBar";
 import PrintablesMatrixTable from "./PrintablesMatrixTable";
+import PrintablesMatrixCatalog from "./PrintablesMatrixCatalog";
 import PrintLabelsDialog from "./PrintLabelsDialog";
 import { Button } from "@/components/ui/button";
-import { Printer, ChevronLeft, ChevronRight } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Printer, ChevronLeft, ChevronRight, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 
 function pickId(v: string | number | null | undefined | Record<string, unknown>): number | null {
@@ -24,6 +26,7 @@ export default function ProductPrintablesView({ userName }: { userName?: string 
     const { matrixRows, usedUnitIds, loading: productsLoading, resetFilters } = useProductPrintables(filters, setFilters, categories, brands);
     const [printOpen, setPrintOpen] = React.useState(false);
     const [isPrinting, setIsPrinting] = React.useState(false);
+    const [viewMode, setViewMode] = React.useState<"list" | "catalog">("list");
     const [allMatrixRows, setAllMatrixRows] = React.useState<MatrixRow[]>([]);
     const [allUsedUnitIds, setAllUsedUnitIds] = React.useState<Set<number>>(new Set());
     const [currentUser, setCurrentUser] = React.useState<string>(userName || "System User");
@@ -156,6 +159,14 @@ export default function ProductPrintablesView({ userName }: { userName?: string 
                     </p>
                 </div>
                 <div className="flex gap-2">
+                    <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as "list" | "catalog")} className="bg-background border border-border/50 rounded-xl p-0.5">
+                        <ToggleGroupItem value="list" aria-label="List View" className="rounded-lg px-3 data-[state=on]:bg-primary/10 data-[state=on]:text-primary">
+                            <List className="w-4 h-4" />
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="catalog" aria-label="Catalog View" className="rounded-lg px-3 data-[state=on]:bg-primary/10 data-[state=on]:text-primary">
+                            <LayoutGrid className="w-4 h-4" />
+                        </ToggleGroupItem>
+                    </ToggleGroup>
                     <Button
                         onClick={handlePrintAll}
                         disabled={productsLoading || lookupsLoading || isPrinting}
@@ -178,14 +189,25 @@ export default function ProductPrintablesView({ userName }: { userName?: string 
                 priceTypes={priceTypes}
             />
 
-            <PrintablesMatrixTable
-                rows={matrixRows}
-                loading={productsLoading}
-                priceTypes={priceTypes}
-                units={units}
-                usedUnitIds={usedUnitIds}
-                selectedPriceTypeIds={filters.price_type_ids}
-            />
+            {viewMode === "list" ? (
+                <PrintablesMatrixTable
+                    rows={matrixRows}
+                    loading={productsLoading}
+                    priceTypes={priceTypes}
+                    units={units}
+                    usedUnitIds={usedUnitIds}
+                    selectedPriceTypeIds={filters.price_type_ids}
+                />
+            ) : (
+                <PrintablesMatrixCatalog
+                    rows={matrixRows}
+                    loading={productsLoading}
+                    priceTypes={priceTypes}
+                    units={units}
+                    usedUnitIds={usedUnitIds}
+                    selectedPriceTypeIds={filters.price_type_ids}
+                />
+            )}
 
             {/* Pagination Controls */}
             {filters.total_pages > 1 && (

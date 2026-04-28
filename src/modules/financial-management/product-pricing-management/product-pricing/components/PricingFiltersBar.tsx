@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import type { Brand, Category, PriceType, PricingFilters, Supplier, Unit } from "../types";
+import type { Brand, Category, PriceType, PricingFilters, Supplier, Unit, ProductTierKey } from "../types";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import {
 
 import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getTierLabel } from "../utils/constants";
 
 type Props = {
     filters: PricingFilters;
@@ -287,7 +288,7 @@ export default function PricingFiltersBar(props: Props) {
         const label = priceTypeLabelById.get(id) ?? `Price #${id}`;
         chips.push({
             key: `pt:${id}`,
-            label: `Price ${label}`,
+            label: getTierLabel(label as ProductTierKey),
             onRemove: () =>
                 setIds(setFilters, "price_type_ids", selectedPriceTypeIds.filter((x) => x !== id)),
         });
@@ -300,6 +301,7 @@ export default function PricingFiltersBar(props: Props) {
             onRemove: () => setFilters((prev) => ({ ...prev, active_only: false })),
         });
     }
+    
 
     if (filters.missing_tier) {
         chips.push({
@@ -721,7 +723,7 @@ export default function PricingFiltersBar(props: Props) {
                                                                 selected ? "opacity-100" : "opacity-0",
                                                             )}
                                                         />
-                                                        <span className="truncate">Price {label}</span>
+                                                        <span className="truncate">{getTierLabel(label as ProductTierKey)}</span>
                                                     </CommandItem>
                                                 );
                                             })}

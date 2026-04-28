@@ -73,6 +73,7 @@ export async function getProducts(params: {
     supplier_ids?: string;
     supplier_scope?: "ALL" | "LINKED_ONLY";
     active_only?: "0" | "1";
+    serialized_only?: "0" | "1";
     missing_tier?: "0" | "1";
     page?: string;
     page_size?: string;
@@ -103,6 +104,7 @@ export async function getPrintProducts(params: {
     supplier_ids?: string;
     supplier_scope?: "ALL" | "LINKED_ONLY";
     active_only?: "0" | "1";
+    serialized_only?: "0" | "1";
     missing_tier?: "0" | "1";
 }) {
     const sp = new URLSearchParams();

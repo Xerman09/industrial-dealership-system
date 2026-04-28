@@ -14,6 +14,7 @@ export const defaultFilters: FilterState = {
     price_type_ids: [],
     supplier_scope: "ALL",
     active_only: true,
+    serialized_only: true,
     page: 1,
     total_pages: 0,
 };
@@ -46,6 +47,7 @@ export function useProductPrintables(
             if (filters.supplier_ids.length) sp.set("supplier_ids", filters.supplier_ids.join(","));
             sp.set("supplier_scope", filters.supplier_scope);
             sp.set("active_only", filters.active_only ? "1" : "0");
+            sp.set("serialized_only", filters.serialized_only ? "1" : "0");
             sp.set("page", String(filters.page));
             sp.set("page_size", "50");
 
@@ -111,7 +113,7 @@ export function useProductPrintables(
         } finally {
             setLoading(false);
         }
-    }, [categories, brands, setFilters, filters.active_only, filters.brand_ids, filters.category_ids, filters.page, filters.q, filters.supplier_ids, filters.supplier_scope, filters.unit_ids]);
+    }, [categories, brands, setFilters, filters.active_only, filters.brand_ids, filters.category_ids, filters.page, filters.q, filters.supplier_ids, filters.supplier_scope, filters.unit_ids, filters.serialized_only]);
 
     React.useEffect(() => {
         refresh();

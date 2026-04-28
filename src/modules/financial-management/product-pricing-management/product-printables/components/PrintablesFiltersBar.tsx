@@ -16,7 +16,10 @@ import {
 } from "@/components/ui/command";
 import { Search, X, Filter, Check, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { getTierLabel } from "../utils/constants";
 
 type Props = {
     filters: FilterState;
@@ -132,7 +135,8 @@ export default function PrintablesFiltersBar({
         (filters.unit_ids?.length || 0) + 
         (filters.supplier_ids?.length || 0) + 
         (filters.price_type_ids?.length || 0) +
-        (filters.q ? 1 : 0);
+        (filters.q ? 1 : 0) +
+        (filters.active_only ? 1 : 0);
 
     return (
         <div className="flex flex-col gap-4 bg-background/60 backdrop-blur-md p-6 rounded-2xl border border-border/50 shadow-sm">
@@ -186,14 +190,27 @@ export default function PrintablesFiltersBar({
                     onToggle={(id) => toggleFilter("unit_ids", id)}
                     onClear={() => setFilters(prev => ({ ...prev, unit_ids: [], page: 1 }))}
                 />
-
                 <FilterSelector
                     label="Prices"
                     selectedIds={filters.price_type_ids || []}
-                    options={priceTypes.map(pt => ({ label: pt.price_type_name, value: String(pt.price_type_id) }))}
+                    options={priceTypes.map(pt => ({ label: getTierLabel(pt.price_type_name), value: String(pt.price_type_id) }))}
                     onToggle={(id) => toggleFilter("price_type_ids", id)}
                     onClear={() => setFilters(prev => ({ ...prev, price_type_ids: [] }))}
                 />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6 py-2 px-1 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                    <Switch
+                        id="print-active-only"
+                        checked={filters.active_only}
+                        onCheckedChange={(checked) => setFilters(prev => ({ ...prev, active_only: checked, page: 1 }))}
+                    />
+                    <Label htmlFor="print-active-only" className="text-sm font-medium cursor-pointer">
+                        Active only
+                    </Label>
+                </div>
+
             </div>
 
             {/* Active Filters Catalog */}
@@ -249,11 +266,18 @@ export default function PrintablesFiltersBar({
                         const name = priceTypes.find(pt => String(pt.price_type_id) === id)?.price_type_name;
                         return (
                             <Badge key={id} variant="secondary" className="gap-1 rounded-lg px-2 py-0.5 bg-blue-50 text-blue-700 border-blue-200">
-                                Price: {name || id}
+                                {getTierLabel(name || id)}
                                 <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={() => removeFilter("price_type_ids", id)} />
                             </Badge>
                         );
                     })}
+                    {filters.active_only && (
+                        <Badge variant="secondary" className="gap-1 rounded-lg px-2 py-0.5 bg-green-50 text-green-700 border-green-200">
+                            Active only
+                            <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={() => setFilters(prev => ({ ...prev, active_only: false, page: 1 }))} />
+                        </Badge>
+                    )}
+
                     <Button variant="link" size="sm" onClick={resetFilters} className="text-[10px] h-auto p-0 text-muted-foreground hover:text-primary">
                         Clear all
                     </Button>

@@ -12,6 +12,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { getTierLabel } from "../utils/constants";
 
 type Props = {
     rows: MatrixRow[];
@@ -82,31 +83,33 @@ export default function PrintablesMatrixTable({
                                     groupColors[i % groupColors.length]
                                 )}
                             >
-                                {pt.price_type_name}
+                                {getTierLabel(pt.price_type_name)}
                             </TableHead>
                         ))}
                     </TableRow>
 
-                    {/* Level 3: Units (BOX, PCS, etc.) */}
-                    <TableRow className="border-b border-[#D1D5DB]">
-                        <TableHead className="sticky left-0 z-30 bg-[#F9FAFB] border-r border-[#D1D5DB]"></TableHead>
-                        <TableHead className="sticky left-[120px] z-30 bg-[#F9FAFB] border-r border-[#D1D5DB]"></TableHead>
-                        <TableHead className="sticky left-[240px] z-30 bg-[#F9FAFB] border-r border-[#D1D5DB]"></TableHead>
-                        {activePriceTypes.map((pt) => (
-                            <React.Fragment key={pt.price_type_id}>
-                                {visibleUnits.length > 0 ? visibleUnits.map((u) => (
-                                    <TableHead 
-                                        key={u.unit_id} 
-                                        className="text-center font-bold text-[9px] uppercase text-[#6B7280] py-1 border-r border-[#E5E7EB] min-w-[70px]"
-                                    >
-                                        {u.unit_shortcut}
-                                    </TableHead>
-                                )) : (
-                                    <TableHead className="min-w-[70px] border-r border-[#E5E7EB]">—</TableHead>
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </TableRow>
+                    {/* Level 3: Units (BOX, PCS, etc.) - Only show if there are multiple units */}
+                    {visibleUnits.length > 1 && (
+                        <TableRow className="border-b border-[#D1D5DB]">
+                            <TableHead className="sticky left-0 z-30 bg-[#F9FAFB] border-r border-[#D1D5DB]"></TableHead>
+                            <TableHead className="sticky left-[120px] z-30 bg-[#F9FAFB] border-r border-[#D1D5DB]"></TableHead>
+                            <TableHead className="sticky left-[240px] z-30 bg-[#F9FAFB] border-r border-[#D1D5DB]"></TableHead>
+                            {activePriceTypes.map((pt) => (
+                                <React.Fragment key={pt.price_type_id}>
+                                    {visibleUnits.length > 0 ? visibleUnits.map((u) => (
+                                        <TableHead 
+                                            key={u.unit_id} 
+                                            className="text-center font-bold text-[9px] uppercase text-[#6B7280] py-1 border-r border-[#E5E7EB] min-w-[70px]"
+                                        >
+                                            {u.unit_shortcut}
+                                        </TableHead>
+                                    )) : (
+                                        <TableHead className="min-w-[70px] border-r border-[#E5E7EB]">—</TableHead>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </TableRow>
+                    )}
                 </TableHeader>
                 <TableBody>
                     {rows.map((row) => (
