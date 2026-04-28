@@ -52,6 +52,7 @@ const EMPTY_FILTERS: PricingFilters = {
     supplier_ids: [],
     supplier_scope: "ALL",
     active_only: true,
+    serialized_only: false,
     missing_tier: false,
     price_type_ids: [],
     show_list_price: false,

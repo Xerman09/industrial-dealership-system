@@ -77,6 +77,7 @@ export type FilterState = {
     price_type_ids: string[];
     supplier_scope: "ALL" | "LINKED_ONLY";
     active_only: boolean;
+    serialized_only: boolean;
     page: number;
     total_pages: number;
 };

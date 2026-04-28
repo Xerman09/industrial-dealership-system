@@ -3,6 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 import type { MatrixRow, ProductTierKey, Unit, PriceType } from "../types";
+import { getTierLabel } from "./constants";
 
 type Options = {
     paper?: "a4" | "legal" | "a3";
@@ -80,10 +81,9 @@ export function generatePricingMatrixPdf(
     const headRow1: PdfCell[] = [
         { content: "Product Details", colSpan: includeBarcode ? 5 : 4, styles: { halign: "center", fontStyle: "bold" } },
     ];
-
     for (const tier of TIERS) {
         headRow1.push({
-            content: `PRICE TYPE ${tier}`,
+            content: getTierLabel(tier).toUpperCase(),
             colSpan: uomCount,
             styles: { 
                 halign: "center", 
@@ -103,10 +103,9 @@ export function generatePricingMatrixPdf(
     ];
 
     if (!includeBarcode) headRow2.splice(1, 1);
-
     for (const tier of TIERS) {
         headRow2.push({
-            content: `Tier ${tier}`,
+            content: getTierLabel(tier),
             colSpan: uomCount,
             styles: { 
                 halign: "center",

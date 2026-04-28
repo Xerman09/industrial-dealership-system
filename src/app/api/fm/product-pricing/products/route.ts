@@ -263,10 +263,11 @@ function applyCommonFilters(args: {
     brandIds: string[];
     unitIds: string[];
     activeOnly: boolean;
+    serializedOnly: boolean;
     missingTier: boolean;
     productIdsIn?: number[];
 }) {
-    const { params, q, categoryIds, brandIds, unitIds, activeOnly, missingTier, productIdsIn } = args;
+    const { params, q, categoryIds, brandIds, unitIds, activeOnly, serializedOnly, missingTier, productIdsIn } = args;
 
     let andIdx = 0;
     const addAnd = (suffix: string, value: string) => {
@@ -275,6 +276,7 @@ function applyCommonFilters(args: {
     };
 
     if (activeOnly) addAnd("[isActive][_eq]", "1");
+    if (serializedOnly) addAnd("[is_serialized][_eq]", "1");
 
     if (categoryIds.length > 0) addAnd("[product_category][_in]", categoryIds.join(","));
     if (brandIds.length > 0) addAnd("[product_brand][_in]", brandIds.join(","));
@@ -351,6 +353,7 @@ export async function GET(req: NextRequest) {
         })();
 
         const activeOnly = norm(searchParams.get("active_only") || "1") === "1";
+        const serializedOnly = norm(searchParams.get("serialized_only") || "1") === "1";
         const missingTier = norm(searchParams.get("missing_tier") || "0") === "1";
 
         const page = Math.max(1, toInt(searchParams.get("page"), 1));
@@ -421,7 +424,7 @@ export async function GET(req: NextRequest) {
                 params.set("fields", fields);
                 params.set("sort", "product_name");
 
-                applyCommonFilters({ params, q, categoryIds, brandIds, unitIds, activeOnly, missingTier });
+                applyCommonFilters({ params, q, categoryIds, brandIds, unitIds, activeOnly, serializedOnly, missingTier });
 
                 const directusUrl = `${DIRECTUS_URL}/items/${PRODUCTS}?${params.toString()}`;
                 const { ok, status, text } = await fetchDirectusRaw(directusUrl);
@@ -457,6 +460,7 @@ export async function GET(req: NextRequest) {
                         brandIds,
                         unitIds,
                         activeOnly,
+                        serializedOnly,
                         missingTier,
                         productIdsIn: ids,
                     });

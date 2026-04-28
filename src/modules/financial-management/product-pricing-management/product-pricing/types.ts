@@ -93,6 +93,7 @@ export type PricingFilters = {
     supplier_scope: "ALL" | "LINKED_ONLY";
 
     active_only: boolean;
+    serialized_only: boolean;
     missing_tier: boolean;
 
     // ✅ New: UI filters for column visibility

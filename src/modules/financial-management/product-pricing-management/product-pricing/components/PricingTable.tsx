@@ -15,6 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { getTierLabel } from "../utils/constants";
 
 import PriceCell from "./PriceCell";
 
@@ -549,7 +550,7 @@ export default function PricingTable({ matrix }: Props) {
                                                             colSpan={uomCount}
                                                         >
                                                             <div style={{ height: HEAD_ROW_H }} className="flex items-center justify-center">
-                                                                {t === "LIST" ? "List Price" : t}
+                                                                {getTierLabel(t)}
                                                             </div>
                                                         </PTableHead>
                                                     );
