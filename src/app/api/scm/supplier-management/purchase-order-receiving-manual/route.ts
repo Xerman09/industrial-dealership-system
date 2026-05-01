@@ -151,6 +151,7 @@ interface ProductRow {
     cost_per_unit?: string | number;
     unit_of_measurement?: { unit_id?: string | number; unit_name?: string; unit_shortcut?: string; } | null;
     unit_of_measurement_count?: string | number;
+    is_serialized?: string | number | boolean;
 }
 
 interface PORow {
@@ -215,7 +216,7 @@ async function fetchProductsMap(base: string, productIds: number[]) {
     const uniq = Array.from(new Set(productIds.filter((n) => n > 0)));
     if (!uniq.length) return map;
     for (const ids of chunk(uniq, 250)) {
-        const url = `${base}/items/${PRODUCTS_COLLECTION}?limit=-1&filter[product_id][_in]=${encodeURIComponent(ids.join(","))}&fields=product_id,product_name,barcode,product_code,cost_per_unit,unit_of_measurement.*,unit_of_measurement_count`;
+        const url = `${base}/items/${PRODUCTS_COLLECTION}?limit=-1&filter[product_id][_in]=${encodeURIComponent(ids.join(","))}&fields=product_id,product_name,barcode,product_code,cost_per_unit,unit_of_measurement.*,unit_of_measurement_count,is_serialized`;
         const j = await fetchJson<{ data: ProductRow[] }>(url);
         for (const p of (j?.data ?? [])) map.set(toNum(p.product_id), p);
     }
@@ -462,6 +463,7 @@ export async function POST(req: NextRequest) {
                         productId: String(pid), branchId: String(bid), name: toStr(p?.product_name, `Product #${pid}`),
                         barcode: productDisplayCode(p, pid), uom: String(p?.unit_of_measurement?.unit_shortcut ?? "BOX").toUpperCase(),
                         expectedQty: remainingQty, receivedQty: 0, requiresRfid: false,
+                        isSerialized: !!p?.is_serialized,
                         isReceived: false, unitPrice: toNum(ln.unit_price),
                         discountType: lineDiscountTypeStr, discountAmount: dAmt, netAmount: 0 // Net amount for THIS session
                     }]);
@@ -527,7 +529,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (action === "save_receipt") {
-            const { poId, receiptNo, receiptDate, porCounts, porMetaData, receiverId } = body;
+            const { poId, receiptNo, receiptDate, porCounts, porSerials, porMetaData, receiverId } = body;
             const thePoId = toNum(poId);
             if (!thePoId) return bad("Missing PO ID");
 
@@ -619,6 +621,23 @@ export async function POST(req: NextRequest) {
                 if (m.expiryDate) patch.expiry_date = m.expiryDate;
 
                 await fetchJson(`${base}/items/${POR_COLLECTION}/${porId}`, { method: "PATCH", body: JSON.stringify(patch) });
+
+                // ✅ Handle Serial Numbers (Piece-by-Piece registration)
+                const serials = Array.isArray(porSerials?.[porId]) ? porSerials[porId] : [];
+                if (serials.length > 0) {
+                    for (const sn of serials) {
+                        const serialPayload = {
+                            purchase_order_product_id: toNum(porId),
+                            product_id: pId,
+                            serial_no: String(sn).trim(),
+                            rfid_code: `SN-${String(sn).trim()}-${Date.now()}-${Math.random().toString(36).substring(7)}`, // Generate a temporary RFID if required by DB constraint
+                        };
+                        await fetchJson(`${base}/items/purchase_order_receiving_items`, {
+                            method: "POST",
+                            body: JSON.stringify(serialPayload)
+                        }).catch(e => console.error("Serial insertion failed:", e));
+                    }
+                }
             }
 
             const fLines = await fetchPOProductsByPOId(base, thePoId), fPors = await fetchPORByPOIds(base, [thePoId]);

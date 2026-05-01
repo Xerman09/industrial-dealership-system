@@ -58,7 +58,7 @@ export function ReceiptPreviewModal({
                 lotId: it.lotId,
                 expiryDate: it.expiryDate,
                 uom: it.uom,
-                rfids: (it.rfids || []) as string[],
+                rfids: it.rfids || [],
             })),
         });
     };
@@ -138,6 +138,15 @@ export function ReceiptPreviewModal({
                                                         </code>
                                                     </div>
                                                     <span className="text-[10px] italic text-muted-foreground">{isPending ? "Pending Manual Entry" : "Manual Entry Recorded"}</span>
+                                                    {it.rfids && it.rfids.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                            {it.rfids.map((sn, sidx) => (
+                                                                <Badge key={sidx} variant="outline" className="text-[9px] h-4 px-1.5 font-mono bg-blue-50 border-blue-100 text-blue-700">
+                                                                    {sn.sn} {sn.tareWeight && `(T: ${sn.tareWeight})`}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="shrink-0 flex items-center gap-6 pl-4 border-l">

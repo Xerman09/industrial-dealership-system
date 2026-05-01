@@ -52,8 +52,8 @@ export function ReceivingWorkbenchManual({ receiverName }: { receiverName?: stri
     }
 
     return (
-        <Card className="p-4 min-w-0">
-            <div className="flex items-start justify-between gap-3">
+        <Card className="p-4 h-full flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between gap-3 shrink-0">
                 <div>
                     <div className="text-base font-semibold">Receiving Workbench Manual</div>
                     <div className="text-xs text-muted-foreground">
@@ -69,7 +69,7 @@ export function ReceivingWorkbenchManual({ receiverName }: { receiverName?: stri
                 </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 flex-1 overflow-hidden flex flex-col">
                 {step === 0 ? (
                     <ReceiptDetailsStep onContinue={() => setStep(1)} />
                 ) : step === 1 ? (

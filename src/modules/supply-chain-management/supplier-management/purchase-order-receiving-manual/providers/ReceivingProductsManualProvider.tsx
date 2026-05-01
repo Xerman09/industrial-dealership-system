@@ -39,6 +39,7 @@ export type ReceivingPOItem = {
     batch_no?: string;
     expiry_date?: string;
     isExtra?: boolean;
+    isSerialized?: boolean;
 };
 
 export type LotOption = {
@@ -87,7 +88,7 @@ export type SavedItem = {
     lotId?: string;
     expiryDate?: string;
     uom?: string;
-    rfids?: string[];
+    rfids?: { sn: string; tareWeight?: string; expiryDate?: string }[];
 };
 
 export type ReceiptSavedInfo = {
@@ -160,6 +161,10 @@ type Ctx = {
     lots: LotOption[];
     lotsLoading: boolean;
 
+    // ✅ SERIALS
+    serialsByPorId: Record<string, { sn: string; tareWeight?: string; expiryDate?: string }[]>;
+    setSerialsByPorId: React.Dispatch<React.SetStateAction<Record<string, { sn: string; tareWeight?: string; expiryDate?: string }[]>>>;
+
     // ✅ UNITS
     units: UnitOption[];
     unitsLoading: boolean;
@@ -175,7 +180,7 @@ async function asJson(r: Response) {
     return j;
 }
 
-function todayYMD() {
+export function todayYMD() {
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -196,6 +201,7 @@ type DraftState = {
     receiptType: string;
     receiptDate: string;
     metaDataByPorId?: Record<string, { batchNo?: string; lotNo?: string; lotId?: string; expiryDate?: string }>;
+    serialsByPorId?: Record<string, { sn: string; tareWeight?: string; expiryDate?: string }[]>;
     savedAt: number;
 };
 
@@ -242,6 +248,9 @@ export function ReceivingProductsManualProvider({ children, receiverId }: { chil
 
     // ✅ METADATA
     const [metaDataByPorId, setMetaDataByPorId] = React.useState<Record<string, { batchNo?: string; lotNo?: string; lotId?: string; expiryDate?: string }>>({});
+
+    // ✅ SERIALS
+    const [serialsByPorId, setSerialsByPorId] = React.useState<Record<string, { sn: string; tareWeight?: string; expiryDate?: string }[]>>({});
 
     // ✅ LOTS
     const [lots, setLots] = React.useState<LotOption[]>([]);
@@ -318,6 +327,7 @@ export function ReceivingProductsManualProvider({ children, receiverId }: { chil
         setSaveError("");
         setManualCounts({});
         setVerifiedProductIds([]);
+        setSerialsByPorId({});
         if (opts?.clearStorage && opts?.poId) {
             clearDraft(opts.poId);
         }
@@ -336,9 +346,26 @@ export function ReceivingProductsManualProvider({ children, receiverId }: { chil
             receiptType,
             receiptDate,
             metaDataByPorId,
+            serialsByPorId,
             savedAt: Date.now(),
         });
-    }, [selectedPO?.id, manualCounts, verifiedProductIds, receiptNo, receiptType, receiptDate, metaDataByPorId]);
+    }, [selectedPO?.id, manualCounts, verifiedProductIds, receiptNo, receiptType, receiptDate, metaDataByPorId, serialsByPorId]);
+
+    // ✅ SYNC SERIALS TO COUNTS
+    React.useEffect(() => {
+        setManualCounts(prev => {
+            const next = { ...prev };
+            let changed = false;
+            Object.entries(serialsByPorId).forEach(([porId, serials]) => {
+                const count = serials.length;
+                if (next[porId] !== count) {
+                    next[porId] = count;
+                    changed = true;
+                }
+            });
+            return changed ? next : prev;
+        });
+    }, [serialsByPorId]);
 
     const openPOById = React.useCallback(
         async (poId: string) => {
@@ -376,6 +403,7 @@ export function ReceivingProductsManualProvider({ children, receiverId }: { chil
                     setManualCounts(draft.manualCounts || {});
                     setVerifiedProductIds(draft.verifiedProductIds || []);
                     setMetaDataByPorId(draft.metaDataByPorId || {});
+                    setSerialsByPorId(draft.serialsByPorId || {});
                     setReceiptNo(draft.receiptNo || "");
                     setReceiptType(draft.receiptType || "");
                     setReceiptDate(draft.receiptDate || todayYMD());
@@ -651,6 +679,7 @@ export function ReceivingProductsManualProvider({ children, receiverId }: { chil
                     receiptType: receiptType.trim(),
                     receiptDate: receiptDate.trim(),
                     porCounts: counts,
+                    porSerials: serialsByPorId,
                     porMetaData: porMetaData ?? {},
                 }),
             });
@@ -724,7 +753,7 @@ export function ReceivingProductsManualProvider({ children, receiverId }: { chil
         } finally {
             setSavingReceipt(false);
         }
-    }, [selectedPO, receiptNo, receiptType, receiptDate, manualCounts, refreshList, resetSession, receiverId]);
+    }, [selectedPO, receiptNo, receiptType, receiptDate, manualCounts, serialsByPorId, refreshList, resetSession, receiverId]);
 
     const value: Ctx = {
         list,
@@ -776,6 +805,9 @@ export function ReceivingProductsManualProvider({ children, receiverId }: { chil
 
         units,
         unitsLoading,
+
+        serialsByPorId,
+        setSerialsByPorId,
     };
 
     return <ReceivingProductsManualContext.Provider value={value}>{children}</ReceivingProductsManualContext.Provider>;

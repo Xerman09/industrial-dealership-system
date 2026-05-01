@@ -13,6 +13,7 @@ export const SupplierSchema = z.object({
     .string()
     .min(1, "Supplier shortcut is required")
     .max(50, "Supplier shortcut is too long"),
+  division_id: z.number().int().nullable().optional(),
   supplier_type: z.string().min(1, "Supplier type is required"),
   tin_number: z
     .string()
@@ -58,6 +59,7 @@ export const SupplierFormSchema = z.object({
     .string()
     .min(1, "Supplier shortcut is required")
     .max(50, "Supplier shortcut is too long"),
+  division_id: z.coerce.number().int().nullable().optional(),
   supplier_type: z.string().min(1, "Supplier type is required"),
   tin_number: z
     .string()

@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
             const productsUrl =
                 `${base}/items/products?limit=-1&fields=*,product_category.*,product_brand.*&filter[product_id][_in]=${encodeURIComponent(
                     productIds.join(",")
-                )}`;
+                )}&filter[is_serialized][_eq]=1`;
 
             const prodRes = await fetch(productsUrl, { headers, cache: "no-store" });
             const prodJson = await prodRes.json().catch(() => ({}));
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
             const productsUrl =
                 `${base}/items/products?limit=-1&fields=*,product_category.*,product_brand.*&filter[product_id][_in]=${encodeURIComponent(
                     ids.join(",")
-                )}`;
+                )}&filter[is_serialized][_eq]=1`;
 
             const prodRes = await fetch(productsUrl, { headers, cache: "no-store" });
             const prodJson = await prodRes.json().catch(() => ({}));
@@ -168,7 +168,7 @@ export async function GET(req: NextRequest) {
         }
 
         // 3) fallback: all products
-        const upstream = `${base}/items/products?limit=${encodeURIComponent(limit)}&fields=*,product_category.*,product_brand.*`;
+        const upstream = `${base}/items/products?limit=${encodeURIComponent(limit)}&fields=*,product_category.*,product_brand.*&filter[is_serialized][_eq]=1`;
         const res = await fetch(upstream, { headers, cache: "no-store" });
         const json = await res.json().catch(() => ({}));
 

@@ -7,6 +7,7 @@ import {
   usePaymentTerms,
   useDeliveryTerms,
 } from "@/modules/financial-management/supplier-registration/hooks/useTerms";
+import { useDivisions } from "@/modules/human-resource-management/employee-admin/structrure/division/hooks/useDivisions";
 import { Term } from "@/modules/financial-management/supplier-registration/services/terms";
 import { SupplierFormSchema, SupplierFormValues } from "@/modules/financial-management/supplier-registration/types/supplier.schema";
 import { Button } from "@/components/ui/button";
@@ -71,12 +72,13 @@ export function AddSupplierForm({ onSuccess, onCancel }: AddSupplierFormProps) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
-  const form = useForm({
-    resolver: zodResolver(SupplierFormSchema),
+  const form = useForm<SupplierFormValues>({
+    resolver: zodResolver(SupplierFormSchema) as any,
     defaultValues: {
       supplier_name: "",
       supplier_shortcut: "",
       supplier_type: "",
+      division_id: null,
       tin_number: "",
       contact_person: "",
       email_address: "",
@@ -100,6 +102,7 @@ export function AddSupplierForm({ onSuccess, onCancel }: AddSupplierFormProps) {
 
   const { paymentTerms, isLoading: isLoadingPayment } = usePaymentTerms();
   const { deliveryTerms, isLoading: isLoadingDelivery } = useDeliveryTerms();
+  const { divisions, isLoading: isLoadingDivisions } = useDivisions();
 
   const onSubmit = async (data: SupplierFormValues) => {
     setIsSubmitting(true);
@@ -152,11 +155,12 @@ export function AddSupplierForm({ onSuccess, onCancel }: AddSupplierFormProps) {
     }
   };
 
-  const onInvalid = useCallback((errors: FieldErrors<SupplierFormValues>) => {
+  const onInvalid = useCallback((errors: any) => {
     const fieldTabMap: Record<string, string> = {
       supplier_name: "contact",
       supplier_shortcut: "contact",
       supplier_type: "contact",
+      division_id: "contact",
       contact_person: "contact",
       email_address: "contact",
       phone_number: "contact",
@@ -253,29 +257,56 @@ export function AddSupplierForm({ onSuccess, onCancel }: AddSupplierFormProps) {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="supplier_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Supplier Type <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Combobox
-                          options={[
-                            { value: "TRADE", label: "TRADE" },
-                            { value: "NON-TRADE", label: "NON-TRADE" },
-                          ]}
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          placeholder="Select supplier type"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="supplier_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Supplier Type <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Combobox
+                            options={[
+                              { value: "TRADE", label: "TRADE" },
+                              { value: "NON-TRADE", label: "NON-TRADE" },
+                            ]}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Select supplier type"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="division_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Division
+                        </FormLabel>
+                        <FormControl>
+                          <Combobox
+                            options={divisions.map(d => ({
+                              value: String(d.division_id),
+                              label: d.division_name
+                            }))}
+                            value={field.value ? String(field.value) : ""}
+                            onValueChange={(val) => field.onChange(val ? Number(val) : null)}
+                            placeholder={isLoadingDivisions ? "Loading divisions..." : "Select division (Optional)"}
+                            disabled={isLoadingDivisions}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}

@@ -13,6 +13,7 @@ import { EditSupplierModal } from "./components/modals/edit-supplier-modal";
 import { DataTableSkeleton } from "@/app/(financial-management)/fm/_components/DataTableSkeleton";
 import { AddSupplierModal } from "./components/modals/add-supplier-modal";
 import { ErrorPage } from "@/app/(financial-management)/fm/_components/ErrorPage";
+import { DivisionFilterProvider } from "@/modules/human-resource-management/employee-admin/structrure/division/providers/DivisionFilterProvider";
 
 export default function SupplierRepresentativeModulePage() {
   const { suppliers, isLoading, error, refresh, setSearchQuery } =
@@ -79,8 +80,9 @@ export default function SupplierRepresentativeModulePage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Header */}
+    <DivisionFilterProvider>
+      <div className="p-6 space-y-4">
+        {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button
@@ -136,5 +138,6 @@ export default function SupplierRepresentativeModulePage() {
         onSuccess={handleAddSuccess}
       />
     </div>
+    </DivisionFilterProvider>
   );
 }

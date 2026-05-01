@@ -10,7 +10,15 @@ import { cn } from "@/lib/utils";
 import { RefreshCw, Package, ChevronRight, ChevronLeft } from "lucide-react";
 import { useReceivingProductsManual } from "../providers/ReceivingProductsManualProvider";
 import {
-} from "@/components/ui/select";
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function statusBadge(status: string) {
     const s = String(status || "").toUpperCase();
@@ -33,9 +41,36 @@ export function AvailableForReceivingManual() {
         refreshList,
         selectAndVerifyPO,
         selectedPO,
+        manualCounts,
+        serialsByPorId,
     } = useReceivingProductsManual();
 
     const [q, setQ] = React.useState("");
+    const [pendingPO, setPendingPO] = React.useState<{ id: string; poNumber: string } | null>(null);
+    const [isSwitchModalOpen, setIsSwitchModalOpen] = React.useState(false);
+
+    const hasUnsavedProgress = React.useMemo(() => {
+        return Object.keys(manualCounts || {}).length > 0 || Object.keys(serialsByPorId || {}).length > 0;
+    }, [manualCounts, serialsByPorId]);
+
+    const initiatePOSwitch = (id: string, poNumber: string) => {
+        if (selectedPO?.id === id) return; // already active
+
+        if (hasUnsavedProgress) {
+            setPendingPO({ id, poNumber });
+            setIsSwitchModalOpen(true);
+        } else {
+            selectAndVerifyPO(id, poNumber);
+        }
+    };
+
+    const confirmSwitch = () => {
+        if (pendingPO) {
+            selectAndVerifyPO(pendingPO.id, pendingPO.poNumber);
+        }
+        setPendingPO(null);
+        setIsSwitchModalOpen(false);
+    };
 
     // ✅ pagination state (locked to 10)
     const pageSize = 10;
@@ -71,7 +106,7 @@ export function AvailableForReceivingManual() {
     }, [filtered, startIndex, endIndex]);
 
     return (
-        <Card className="p-4 sticky top-4 self-start">
+        <Card className="p-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <div className="text-base font-semibold">Available for Receiving</div>
@@ -130,7 +165,7 @@ export function AvailableForReceivingManual() {
                 </div>
             </div>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 flex-1 overflow-y-auto min-h-0 pr-1 space-y-2 py-1 scrollbar-thin">
                 {listLoading ? (
                     <>
                         {Array.from({ length: 4 }).map((_, i) => (
@@ -158,8 +193,7 @@ export function AvailableForReceivingManual() {
                             <button
                                 key={po.id}
                                 type="button"
-                                // ✅ IMPORTANT: pass (poId, poNumber) so provider uses open_po directly
-                                onClick={() => selectAndVerifyPO(po.id, po.poNumber)}
+                                onClick={() => initiatePOSwitch(po.id, po.poNumber)}
                                 className={cn(
                                     "w-full text-left rounded-xl border border-border p-3 transition",
                                     "hover:bg-muted/40",
@@ -253,6 +287,29 @@ export function AvailableForReceivingManual() {
                     </Button>
                 </div>
             ) : null}
+
+            <AlertDialog open={isSwitchModalOpen} onOpenChange={setIsSwitchModalOpen}>
+                <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-bold flex items-center gap-2 text-amber-600">
+                            <Package className="h-5 w-5" />
+                            Unsaved Progress Detected
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm">
+                            You are currently receiving items for <span className="font-bold text-foreground">{selectedPO?.poNumber}</span>. 
+                            If you switch to <span className="font-bold text-foreground">{pendingPO?.poNumber}</span> now, your current scanned data and manual counts will be <span className="font-bold text-red-600 underline">discarded</span>.
+                            <br /><br />
+                            Are you sure you want to proceed?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setPendingPO(null)}>Stay on Current PO</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmSwitch} className="bg-amber-600 hover:bg-amber-700">
+                            Yes, Discard & Switch
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Card>
     );
 }

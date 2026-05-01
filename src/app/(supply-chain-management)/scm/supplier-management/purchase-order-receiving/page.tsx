@@ -127,11 +127,9 @@ export default async function ReceivingProductsManualPage() {
             </header>
 
             {/* ===== Content ===== */}
-            <ScrollArea className="min-h-0 flex-1">
-                <div className="p-4">
-                    <ReceivingProductsManualModule receiverId={receiverId} receiverName={headerUser.name} />
-                </div>
-            </ScrollArea>
+            <main className="flex-1 min-h-0 overflow-hidden">
+                <ReceivingProductsManualModule receiverId={receiverId} receiverName={headerUser.name} />
+            </main>
         </div>
     );
 }

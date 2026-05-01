@@ -145,6 +145,7 @@ async function fetchSuppliersMapByIds(base: string, supplierIds: number[]) {
     const url =
         `${base}/items/${SUPPLIERS_COLLECTION}?limit=-1` +
         `&filter[id][_in]=${encodeURIComponent(ids.join(","))}` +
+        `&filter[division_id][_eq]=1` +
         `&fields=id,supplier_name`;
 
     const j = await fetchJson(url) as { data: Record<string, unknown>[] };
@@ -176,6 +177,7 @@ async function fetchProductsMapByIds(base: string, productIds: number[]) {
     const url =
         `${base}/items/${PRODUCTS_COLLECTION}?limit=-1` +
         `&filter[product_id][_in]=${encodeURIComponent(ids.join(","))}` +
+        `&filter[is_serialized][_eq]=1` +
         `&fields=product_id,product_name,barcode,product_code,unit_of_measurement,parent_id,product_category,product_brand`;
 
     const j = await fetchJson(url) as { data: Record<string, unknown>[] };
@@ -1048,6 +1050,9 @@ export async function GET(req: NextRequest) {
                 return "—";
             };
 
+            // Filter out POs whose supplier doesn't belong to division 1
+            if (sid && !suppliersMap.has(sid)) return null;
+
             return {
                 id: String(poId),
                 purchase_order_id: poId,
@@ -1071,7 +1076,7 @@ export async function GET(req: NextRequest) {
 
                 preparer_name: getPreparer(),
             };
-        });
+        }).filter(Boolean); // remove nulls
 
         return ok(list);
     } catch (e: unknown) {

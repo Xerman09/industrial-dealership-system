@@ -26,7 +26,7 @@ type ReceiptData = {
         lotId?: string;
         expiryDate?: string;
         uom?: string;
-        rfids: string[];
+        rfids: { sn: string; tareWeight?: string; expiryDate?: string }[];
     }>;
     priceType: string;
     isInvoice?: boolean;
@@ -143,7 +143,13 @@ export async function generateOfficialSupplierReceiptV5(data: ReceiptData) {
                 const batchExpLines = [
                     it.batchNo ? `Batch: ${it.batchNo}` : "",
                     it.lotId ? `Lot: ${it.lotId}` : "",
-                    it.expiryDate ? `Exp: ${it.expiryDate}` : ""
+                    it.expiryDate ? `Exp: ${it.expiryDate}` : "",
+                    ...(it.rfids || []).map((s: any) => {
+                        let txt = `S/N: ${s.sn}`;
+                        if (s.tareWeight) txt += ` (Tare: ${s.tareWeight})`;
+                        if (s.expiryDate) txt += ` (Exp: ${s.expiryDate})`;
+                        return txt;
+                    })
                 ].filter(Boolean).join("\n");
 
                 tableRows.push([

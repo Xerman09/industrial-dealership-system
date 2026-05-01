@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
         // Filter active suppliers and specific types
         upstreamUrl.searchParams.set("filter[isActive][_eq]", "1");
         upstreamUrl.searchParams.set("filter[supplier_type][_in]", "TRADE,NON-TRADE");
+        upstreamUrl.searchParams.set("filter[division_id][_eq]", "1");
 
         const res = await fetch(upstreamUrl.toString(), {
             headers: buildUpstreamHeaders(),

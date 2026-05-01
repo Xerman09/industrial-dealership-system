@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, QrCode } from "lucide-react";
 import { useReceivingProductsManual, ReceivingPOItem } from "../../providers/ReceivingProductsManualProvider";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -38,11 +38,10 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         receiptSaved,
         lots,
         setMetaDataByPorId,
+        serialsByPorId,
     } = useReceivingProductsManual();
 
     const [clientSaveError, setClientSaveError] = React.useState("");
-    const [lotNumbers, setLotNumbers] = React.useState<Record<string, string>>({});
-    const [batchNumbers, setBatchNumbers] = React.useState<Record<string, string>>({});
     const [expiryDates, setExpiryDates] = React.useState<Record<string, string>>({});
     const [previewOpen, setPreviewOpen] = React.useState(false);
     const [isPartialModalOpen, setIsPartialModalOpen] = React.useState(false);
@@ -53,8 +52,6 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
 
     // Initial Sync from PO data and Context Draft
     React.useEffect(() => {
-        const newLots: Record<string, string> = {};
-        const newBatches: Record<string, string> = {};
         const newExpiries: Record<string, string> = {};
         let syncReady = true;
 
@@ -62,8 +59,6 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
             selectedPO.allocations.forEach(a => {
                 a.items.forEach((it: ReceivingPOItem) => {
                     const porId = String(it.id);
-                    if (it.lot_no) newLots[porId] = it.lot_no;
-                    if (it.batch_no) newBatches[porId] = it.batch_no;
                     if (it.expiry_date) newExpiries[porId] = it.expiry_date;
                 });
             });
@@ -72,15 +67,11 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         // Overlay draft data (crucial for reloading page)
         if (draftMetaData) {
             Object.entries(draftMetaData).forEach(([porId, meta]) => {
-                if (meta.lotNo || meta.lotId) newLots[porId] = meta.lotNo || meta.lotId || "";
-                if (meta.batchNo) newBatches[porId] = meta.batchNo;
                 if (meta.expiryDate) newExpiries[porId] = meta.expiryDate;
             });
         }
 
         if (syncReady) {
-            setLotNumbers(prev => ({ ...newLots, ...prev }));
-            setBatchNumbers(prev => ({ ...newBatches, ...prev }));
             setExpiryDates(prev => ({ ...newExpiries, ...prev }));
         }
         return () => { syncReady = false; };
@@ -92,10 +83,10 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         const metaData: Record<string, { lotNo: string; batchNo?: string; expiryDate: string }> = {};
         let hasData = false;
         
-        Object.keys(lotNumbers).forEach(id => {
+        Object.keys(expiryDates).forEach(id => {
             metaData[id] = { 
-                lotNo: lotNumbers[id] || "", 
-                batchNo: batchNumbers[id] || "",
+                lotNo: "", 
+                batchNo: "",
                 expiryDate: expiryDates[id] || "" 
             };
             hasData = true;
@@ -104,7 +95,7 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         if (hasData) {
             setMetaDataByPorId(metaData);
         }
-    }, [lotNumbers, batchNumbers, expiryDates, setMetaDataByPorId]);
+    }, [expiryDates, setMetaDataByPorId]);
 
     React.useEffect(() => {
         if (!receiptSaved) return;
@@ -129,10 +120,10 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
 
     const executeSave = async () => {
         const metaData: Record<string, { lotNo: string; batchNo?: string; expiryDate: string }> = {};
-        Object.keys(lotNumbers).forEach(id => {
+        Object.keys(expiryDates).forEach(id => {
             metaData[id] = { 
-                lotNo: lotNumbers[id] || "", 
-                batchNo: batchNumbers[id] || "",
+                lotNo: "", 
+                batchNo: "",
                 expiryDate: expiryDates[id] || "" 
             };
         });
@@ -151,18 +142,16 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         allItems.forEach((it: ReceivingPOItem) => {
             const porId = String(it.id);
             const count = safeCounts[porId] ?? 0;
-            if (count > 0) {
-                const batch = batchNumbers[porId] || "";
-                const lot = lotNumbers[porId] || "";
+            if (count > 0 && !it.isSerialized) {
                 const exp = expiryDates[porId] || "";
-                if (!batch.trim() || !lot.trim() || !exp.trim()) missingLotOrExpiry.push(it.name);
+                if (!exp.trim()) missingLotOrExpiry.push(it.name);
             }
         });
 
         if (missingLotOrExpiry.length > 0) {
             setShowErrors(true);
             toast.error("Required Fields Missing", {
-                description: "Batch, Lot and Expiry Date are required for all items with entered quantities."
+                description: "Expiry Date is required for all items with entered quantities."
             });
             return;
         }
@@ -193,16 +182,16 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         }
 
         const metaData: Record<string, { lotNo: string; batchNo?: string; expiryDate: string }> = {};
-        Object.keys(lotNumbers).forEach(id => {
+        Object.keys(expiryDates).forEach(id => {
             metaData[id] = { 
-                lotNo: lotNumbers[id] || "", 
-                batchNo: batchNumbers[id] || "",
+                lotNo: "", 
+                batchNo: "",
                 expiryDate: expiryDates[id] || "" 
             };
         });
 
         await saveReceipt(metaData);
-    }, [saveReceipt, selectedPO?.status, allItems, safeCounts, lotNumbers, batchNumbers, expiryDates]);
+    }, [saveReceipt, selectedPO?.status, allItems, safeCounts, expiryDates]);
 
     const totalEntered = Object.values(safeCounts).reduce((a: number, b: number) => a + Number(b), 0);
     const totalExpected = allItems.reduce((a: number, b: ReceivingPOItem) => a + Number(b.expectedQty || 0), 0);
@@ -267,8 +256,6 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
                             <TableHeader className="bg-muted">
                                 <TableRow>
                                     <TableHead className="text-[10px] uppercase">Product Name</TableHead>
-                                    <TableHead className="text-[10px] uppercase">Batch</TableHead>
-                                    <TableHead className="text-[10px] uppercase">Lot</TableHead>
                                     <TableHead className="text-[10px] uppercase">Expiry</TableHead>
                                     <TableHead className="text-[10px] uppercase text-right">Unit Price</TableHead>
                                     <TableHead className="text-[10px] uppercase text-center">Disc. Type</TableHead>
@@ -303,44 +290,46 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
                                                         {isOver && <span className="text-[10px] text-red-600 dark:text-red-400 ml-2 uppercase font-black tracking-tighter" title="Quantity exceeds ordered amount">⚠️ OVER</span>}
                                                     </div>
                                                     <div className="text-[9px] text-muted-foreground font-mono">SKU: {it.barcode} | UOM: {it.uom}</div>
-                                                </TableCell>
-                                                <TableCell className="min-w-[100px]">
-                                                    <Input 
-                                                        className={cn(
-                                                            "h-8 text-[11px] font-bold",
-                                                            showErrors && count > 0 && !(batchNumbers[porId] || "").trim() && "border-red-500 ring-1 ring-red-500",
-                                                            isOver && "border-red-200 dark:border-red-900"
-                                                        )}
-                                                        placeholder="Batch #" 
-                                                        value={batchNumbers[porId] || ""} 
-                                                        onChange={(e) => setBatchNumbers(prev => ({ ...prev, [porId]: e.target.value }))} 
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="min-w-[120px]">
-                                                    <select 
-                                                        className={cn(
-                                                            "h-8 w-full rounded-md border border-input bg-background px-2 text-[11px]",
-                                                            showErrors && count > 0 && !(lotNumbers[porId] || "").trim() && "border-red-500 ring-1 ring-red-500",
-                                                            isOver && "border-red-200 dark:border-red-900"
-                                                        )}
-                                                        value={lotNumbers[porId] || ""} 
-                                                        onChange={(e) => setLotNumbers(prev => ({ ...prev, [porId]: e.target.value }))}
-                                                    >
-                                                        <option value="">Select Lot</option>
-                                                        {lots.map((l: { lot_id: string | number; lot_name: string }) => <option key={l.lot_id} value={String(l.lot_id)}>{l.lot_name}</option>)}
-                                                    </select>
+                                                    {it.isSerialized && (
+                                                        <div className="mt-2 space-y-1">
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {(serialsByPorId[porId] || []).map((sns, i) => (
+                                                                    <div key={i} className="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-1.5 py-0.5 gap-2 shadow-sm">
+                                                                        <span className="text-[10px] font-mono font-black text-slate-700 dark:text-slate-200 uppercase tracking-tighter">{sns.sn}</span>
+                                                                        <div className="flex items-center gap-1 border-l pl-1.5 border-slate-200 dark:border-slate-700">
+                                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tare:</span>
+                                                                            <span className="text-[9px] font-bold text-slate-600">{sns.tareWeight || "-"}</span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1 border-l pl-1.5 border-slate-200 dark:border-slate-700">
+                                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Exp:</span>
+                                                                            <span className="text-[9px] font-bold text-slate-600">{sns.expiryDate || "-"}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            {(serialsByPorId[porId] || []).length === 0 && (
+                                                                <span className="text-[10px] text-red-500 font-bold italic flex items-center gap-1">
+                                                                    <QrCode className="w-3 h-3" /> Missing Serials
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="min-w-[130px]">
-                                                    <Input 
-                                                        type="date" 
-                                                        className={cn(
-                                                            "h-8 text-[11px]",
-                                                            showErrors && count > 0 && !(expiryDates[porId] || "").trim() && "border-red-500 ring-1 ring-red-500",
-                                                            isOver && "border-red-200 dark:border-red-900"
-                                                        )}
-                                                        value={expiryDates[porId] || ""} 
-                                                        onChange={(e) => setExpiryDates(prev => ({ ...prev, [porId]: e.target.value }))} 
-                                                    />
+                                                    {it.isSerialized ? (
+                                                        <span className="text-[10px] font-bold text-slate-400 italic">Encoded per serial</span>
+                                                    ) : (
+                                                        <Input 
+                                                            type="date" 
+                                                            className={cn(
+                                                                "h-8 text-[11px]",
+                                                                showErrors && count > 0 && !(expiryDates[porId] || "").trim() && "border-red-500 ring-1 ring-red-500",
+                                                                isOver && "border-red-200 dark:border-red-900"
+                                                            )}
+                                                            value={expiryDates[porId] || ""} 
+                                                            onChange={(e) => setExpiryDates(prev => ({ ...prev, [porId]: e.target.value }))} 
+                                                        />
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="text-right text-xs">{formatPHP(unitP)}</TableCell>
                                                 <TableCell className="text-center text-[10px] text-muted-foreground">{it.discountType}</TableCell>
@@ -473,13 +462,13 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
                             uom: it.uom || "",
                             unitPrice: Number(it.unitPrice) || 0,
                             discountAmount: Number(it.discountAmount) || 0,
-                            batchNo: batchNumbers[String(it.id)] || "",
-                            lotId: lotNumbers[String(it.id)] || "",
+                            batchNo: "",
+                            lotId: "",
                             expiryDate: expiryDates[String(it.id)] || "",
                             expectedQty: Number(it.expectedQty) || 0,
                             receivedQtyAtStart: 0,
                             receivedQtyNow: safeCounts[String(it.id)] ?? 0,
-                            rfids: []
+                            rfids: serialsByPorId[String(it.id)] || []
                         }))
                     }}
                     poNumber={selectedPO?.poNumber || "N/A"}

@@ -635,7 +635,6 @@ export default function CreatePurchaseOrderModule({ encoderId, preparerName }: {
 
                         return np;
                     })
-                    .filter((np: any) => np.uomId === BOX_UOM_ID)
                 );
                 setIsInvoice(false);
             } catch (e: unknown) {
@@ -905,7 +904,7 @@ export default function CreatePurchaseOrderModule({ encoderId, preparerName }: {
                         branchName: x.branchName,
                         productId: it.id,
                         qtyBoxes: it.orderQty,
-                        uomId: BOX_UOM_ID,
+                        uomId: it.uomId || BOX_UOM_ID,
                         pricePerBox: it.price,
                         pcsPerBox: it.unitsPerBox ?? 1,
                         baseUomId: it.baseUomId ?? null,
