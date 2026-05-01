@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useForm, FieldErrors } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   usePaymentTerms,
@@ -73,6 +73,7 @@ export function AddSupplierForm({ onSuccess, onCancel }: AddSupplierFormProps) {
   }, []);
 
   const form = useForm<SupplierFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(SupplierFormSchema) as any,
     defaultValues: {
       supplier_name: "",
@@ -155,6 +156,7 @@ export function AddSupplierForm({ onSuccess, onCancel }: AddSupplierFormProps) {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onInvalid = useCallback((errors: any) => {
     const fieldTabMap: Record<string, string> = {
       supplier_name: "contact",

@@ -36,7 +36,6 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         savingReceipt,
         saveError,
         receiptSaved,
-        lots,
         setMetaDataByPorId,
         serialsByPorId,
     } = useReceivingProductsManual();

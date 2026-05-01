@@ -20,7 +20,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AlertTriangle, ListFilter, Plus, Trash2, QrCode, Package, ChevronRight, ChevronLeft } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export function ManualProductsStep({ onContinue, onBack }: { onContinue: () => void; onBack: () => void }) {
     const {
@@ -118,6 +118,7 @@ export function ManualProductsStep({ onContinue, onBack }: { onContinue: () => v
         setSerialModalOpen(true);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const activeItem = filteredItems.find(x => String((x as any).id) === activePorId) as any;
     const orderedLimit = activeItem ? Math.max(0, Number(activeItem.expectedQty || 0) - Number(activeItem.receivedQty || 0)) : Infinity;
 
