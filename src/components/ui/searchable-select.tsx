@@ -26,6 +26,7 @@ export interface SearchableSelectProps {
     placeholder?: string;
     disabled?: boolean;
     className?: string;
+    onSearchChange?: (value: string) => void;
 }
 
 export function SearchableSelect({
@@ -35,6 +36,7 @@ export function SearchableSelect({
     placeholder = "Select option...",
     disabled = false,
     className,
+    onSearchChange,
 }: SearchableSelectProps) {
     const [open, setOpen] = React.useState(false);
 
@@ -53,15 +55,19 @@ export function SearchableSelect({
                     className={cn("w-full justify-between", !value && "text-muted-foreground", className)}
                     disabled={disabled}
                 >
-
-                    {selectedLabel || placeholder}
+                    <span className="truncate">
+                        {selectedLabel || placeholder}
+                    </span>
 
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder={`Search ${placeholder.toLowerCase()}...`} />
+                <Command shouldFilter={!onSearchChange}>
+                    <CommandInput 
+                        placeholder={`Search ${placeholder.toLowerCase()}...`} 
+                        onValueChange={onSearchChange}
+                    />
                     <CommandList>
                         <CommandEmpty>No results found.</CommandEmpty>
                         <CommandGroup>
