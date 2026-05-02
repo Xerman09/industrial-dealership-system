@@ -62,7 +62,7 @@ export function useCylinderAssets() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, branchId, status, page, pageSize, sortBy, sortOrder]);
+  }, [debouncedSearch, branchId, status, productId, condition, page, pageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     refresh();

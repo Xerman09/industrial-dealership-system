@@ -1,7 +1,7 @@
 import { CylinderAsset } from "../types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash, Search, Cylinder, ArrowUp, ArrowDown, ArrowUpDown, Filter, X, Building2, Package } from "lucide-react";
+import { Plus, Edit, Trash, Search, Cylinder, ArrowUp, ArrowDown, ArrowUpDown, Filter, X, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,15 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useReactToPrint } from "react-to-print";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   AlertTriangle, 
   QrCode, 
-  Info, 
   CheckCircle2, 
-  AlertCircle, 
-  History,
-  ShieldCheck,
   ShieldAlert
 } from "lucide-react";
 import { 
@@ -32,12 +28,6 @@ import {
 import { format, isPast, isBefore, addDays } from "date-fns";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Printer } from "lucide-react";
 
 interface Props {
@@ -125,7 +115,7 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
       const d = await response.json();
       if (d.data) {
         setGlobalAssets(d.data);
-        setSelectedIds(d.data.map((a: any) => a.id));
+        setSelectedIds(d.data.map((a: CylinderAsset) => a.id));
       }
     } catch (error) {
       console.error("Failed to fetch all assets:", error);
@@ -157,13 +147,13 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
     fetch("/api/scm/inventory-management/cylinder-assets/products")
       .then((r) => r.json())
       .then((d) => {
-        if (d.data) setProducts(d.data.map((p: any) => ({ id: p.product_id, name: p.product_name })));
+        if (d.data) setProducts(d.data.map((p: { product_id: number; product_name: string }) => ({ id: p.product_id, name: p.product_name })));
       });
 
     fetch("/api/scm/inventory-management/stock-adjustment/branches")
       .then((r) => r.json())
       .then((d) => {
-        if (d.data) setBranches(d.data.map((b: any) => ({ id: b.id, name: b.branch_name })));
+        if (d.data) setBranches(d.data.map((b: { id: number; branch_name: string }) => ({ id: b.id, name: b.branch_name })));
       });
   }, []);
 
@@ -496,7 +486,7 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
                     <div className="flex flex-col items-center justify-center p-8 text-muted-foreground opacity-60">
                       <Cylinder className="h-12 w-12 mb-4 stroke-1" />
                       <p className="text-lg font-medium">No assets found</p>
-                      <p className="text-sm">Click "Add Asset" to register your first serialized product.</p>
+                      <p className="text-sm">Click &quot;Add Asset&quot; to register your first serialized product.</p>
                     </div>
                   </TableCell>
                 </TableRow>

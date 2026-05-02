@@ -35,8 +35,8 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  createBulkAssets: (payloads: Partial<CylinderAsset>[]) => Promise<any>;
-  updateAsset: (id: number, payload: Partial<CylinderAsset>) => Promise<any>;
+  createBulkAssets: (payloads: Partial<CylinderAsset>[]) => Promise<unknown>;
+  updateAsset: (id: number, payload: Partial<CylinderAsset>) => Promise<unknown>;
 }
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -89,7 +89,7 @@ export function CylinderAssetsForm({
   const [rows, setRows] = useState<SerialRow[]>([defaultRow()]);
 
   // Edit mode single asset state
-  const [editData, setEditData] = useState<Partial<CylinderAsset>>({});
+  const [editData, setEditData] = useState<Partial<Omit<CylinderAsset, 'tare_weight'>> & { tare_weight?: string | number | null }>({});
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +98,7 @@ export function CylinderAssetsForm({
       .then((d) => {
         if (d.data)
           setProducts(
-            d.data.map((p: any) => ({
+            d.data.map((p: { product_id: number; product_code: string; product_name: string }) => ({
               value: String(p.product_id),
               label: `${p.product_code} — ${p.product_name}`,
             }))
@@ -111,7 +111,7 @@ export function CylinderAssetsForm({
       .then((d) => {
         if (d.data)
           setBranches(
-            d.data.map((b: any) => ({ value: String(b.id), label: b.branch_name }))
+            d.data.map((b: { id: number; branch_name: string }) => ({ value: String(b.id), label: b.branch_name }))
           );
       })
       .catch(console.error);
@@ -127,7 +127,7 @@ export function CylinderAssetsForm({
         .then((d) => {
           if (d.data)
             setCustomers(
-              d.data.map((c: any) => ({
+              d.data.map((c: { customer_code: string; customer_name: string }) => ({
                 value: c.customer_code,
                 label: `${c.customer_code} — ${c.customer_name}`,
               }))
@@ -145,10 +145,10 @@ export function CylinderAssetsForm({
     if (id && asset) {
       // Edit mode: pre-populate all fields from the asset
       const productIdVal = asset.product_id
-        ? String(typeof asset.product_id === "object" ? (asset.product_id as any).product_id : asset.product_id)
+        ? String(typeof asset.product_id === "object" ? (asset.product_id as unknown as { product_id: number }).product_id : asset.product_id)
         : "";
       const branchIdVal = asset.current_branch_id
-        ? String(typeof asset.current_branch_id === "object" ? (asset.current_branch_id as any).id : asset.current_branch_id)
+        ? String(typeof asset.current_branch_id === "object" ? (asset.current_branch_id as unknown as { id: number }).id : asset.current_branch_id)
         : "";
       setProductId(productIdVal);
       setBranchId(branchIdVal);
@@ -161,7 +161,7 @@ export function CylinderAssetsForm({
         tare_weight: asset.tare_weight !== null ? String(Number(asset.tare_weight).toFixed(2)) : "",
         current_customer_code:
           typeof asset.current_customer_code === "object"
-            ? (asset.current_customer_code as any)?.customer_code || null
+            ? (asset.current_customer_code as unknown as { customer_code: string })?.customer_code || null
             : asset.current_customer_code || null,
       });
     } else if (!id) {
@@ -197,10 +197,10 @@ export function CylinderAssetsForm({
           current_branch_id: branchId ? Number(branchId) : null,
           remarks,
           current_customer_code: editData.current_customer_code || null,
-          tare_weight: (editData.tare_weight !== null && editData.tare_weight !== undefined && editData.tare_weight !== "" && !isNaN(Number(editData.tare_weight))) 
+          tare_weight: (editData.tare_weight !== null && editData.tare_weight !== undefined && String(editData.tare_weight) !== "" && !isNaN(Number(editData.tare_weight))) 
             ? Number(editData.tare_weight) 
             : null,
-        });
+        } as Partial<CylinderAsset>);
       } else {
         // Bulk create
         const payloads = rows

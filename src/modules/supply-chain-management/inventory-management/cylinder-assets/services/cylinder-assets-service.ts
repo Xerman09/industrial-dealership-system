@@ -29,7 +29,7 @@ export const cylinderAssetsService = {
       query += `&filter=${encodeURIComponent(JSON.stringify(filters))}`;
     }
 
-    const res = await directusFetch<{ data: any[]; meta?: { total_count: number } }>(`${DIRECTUS_URL}/items/cylinder_assets?${query}`);
+    const res = await directusFetch<{ data: CylinderAsset[]; meta?: { total_count: number } }>(`${DIRECTUS_URL}/items/cylinder_assets?${query}`);
     const assets = res.data;
     const total = res.meta?.total_count || assets.length;
 
@@ -40,22 +40,22 @@ export const cylinderAssetsService = {
     const branchIds = Array.from(new Set(assets.map(a => a.current_branch_id).filter(Boolean)));
     const customerCodes = Array.from(new Set(assets.map(a => a.current_customer_code).filter(Boolean)));
 
-    let products: any[] = [];
-    let branches: any[] = [];
-    let customers: any[] = [];
+    let products: { product_id: number; product_name: string; product_code: string }[] = [];
+    let branches: { id: number; branch_name: string }[] = [];
+    let customers: { customer_code: string; customer_name: string }[] = [];
 
     if (productIds.length > 0) {
-      const pRes = await directusFetch<{ data: any[] }>(`${DIRECTUS_URL}/items/products?fields=product_id,product_name,product_code&filter=${JSON.stringify({ product_id: { _in: productIds } })}`);
+      const pRes = await directusFetch<{ data: { product_id: number; product_name: string; product_code: string }[] }>(`${DIRECTUS_URL}/items/products?fields=product_id,product_name,product_code&filter=${JSON.stringify({ product_id: { _in: productIds } })}`);
       products = pRes.data || [];
     }
 
     if (branchIds.length > 0) {
-      const bRes = await directusFetch<{ data: any[] }>(`${DIRECTUS_URL}/items/branches?fields=id,branch_name&filter=${JSON.stringify({ id: { _in: branchIds } })}`);
+      const bRes = await directusFetch<{ data: { id: number; branch_name: string }[] }>(`${DIRECTUS_URL}/items/branches?fields=id,branch_name&filter=${JSON.stringify({ id: { _in: branchIds } })}`);
       branches = bRes.data || [];
     }
 
     if (customerCodes.length > 0) {
-      const cRes = await directusFetch<{ data: any[] }>(`${DIRECTUS_URL}/items/customer?fields=customer_code,customer_name&filter=${JSON.stringify({ customer_code: { _in: customerCodes } })}`);
+      const cRes = await directusFetch<{ data: { customer_code: string; customer_name: string }[] }>(`${DIRECTUS_URL}/items/customer?fields=customer_code,customer_name&filter=${JSON.stringify({ customer_code: { _in: customerCodes } })}`);
       customers = cRes.data || [];
     }
 
@@ -70,7 +70,7 @@ export const cylinderAssetsService = {
   },
 
   async create(payload: Partial<CylinderAsset>) {
-    const res = await directusFetch<{ data: any }>(`${DIRECTUS_URL}/items/cylinder_assets`, {
+    const res = await directusFetch<{ data: CylinderAsset }>(`${DIRECTUS_URL}/items/cylinder_assets`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -78,7 +78,7 @@ export const cylinderAssetsService = {
   },
 
   async createBulk(payloads: Partial<CylinderAsset>[]) {
-    const res = await directusFetch<{ data: any[] }>(`${DIRECTUS_URL}/items/cylinder_assets`, {
+    const res = await directusFetch<{ data: CylinderAsset[] }>(`${DIRECTUS_URL}/items/cylinder_assets`, {
       method: "POST",
       body: JSON.stringify(payloads),
     });
@@ -86,7 +86,7 @@ export const cylinderAssetsService = {
   },
 
   async update(id: number, payload: Partial<CylinderAsset>) {
-    const res = await directusFetch<{ data: any }>(`${DIRECTUS_URL}/items/cylinder_assets/${id}`, {
+    const res = await directusFetch<{ data: CylinderAsset }>(`${DIRECTUS_URL}/items/cylinder_assets/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
@@ -95,7 +95,7 @@ export const cylinderAssetsService = {
 
   async fetchSerializedProducts() {
     const query = `fields=product_id,product_name,product_code&filter[isActive][_eq]=1&filter[is_serialized][_eq]=1&limit=-1&sort=product_name`;
-    const res = await directusFetch<{ data: any[] }>(`${DIRECTUS_URL}/items/products?${query}`);
+    const res = await directusFetch<{ data: { product_id: number; product_name: string; product_code: string }[] }>(`${DIRECTUS_URL}/items/products?${query}`);
     return res.data;
   },
 
@@ -110,7 +110,7 @@ export const cylinderAssetsService = {
       };
       query += `&filter=${encodeURIComponent(JSON.stringify(filter))}`;
     }
-    const res = await directusFetch<{ data: any[] }>(`${DIRECTUS_URL}/items/customer?${query}`);
+    const res = await directusFetch<{ data: { customer_code: string; customer_name: string }[] }>(`${DIRECTUS_URL}/items/customer?${query}`);
     return res.data;
   },
 
