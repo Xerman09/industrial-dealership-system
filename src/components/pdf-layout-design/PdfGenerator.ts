@@ -64,9 +64,34 @@ export const renderElement = (doc: jsPDF, el: PdfElementConfig, data: PdfData | 
         const imageUrl = el.id === 'company_logo' ? d?.company_logo : (d?.[el.id] || el.content);
         if (imageUrl) {
             try {
-                doc.addImage(imageUrl, 'PNG', el.x, el.y, el.width, el.height, undefined, 'FAST');
+                // Detect format from base64 prefix if present
+                let format: string | undefined = undefined;
+                if (imageUrl.startsWith('data:image/')) {
+                    const mime = imageUrl.split(';')[0].split(':')[1];
+                    if (mime === 'image/jpeg' || mime === 'image/jpg') format = 'JPEG';
+                    else if (mime === 'image/png') format = 'PNG';
+                    else if (mime === 'image/webp') format = 'WEBP';
+                    else if (mime === 'image/gif') format = 'GIF';
+                }
+
+                doc.addImage(
+                    imageUrl,
+                    format || 'PNG',
+                    el.x,
+                    el.y,
+                    el.width,
+                    el.height,
+                    undefined,
+                    'FAST'
+                );
             } catch (e) {
-                console.error("Error drawing image:", e);
+                console.error("Error drawing image with detected format:", e);
+                try {
+                    // Final attempt: Let jsPDF try to guess the format automatically
+                    doc.addImage(imageUrl, el.x, el.y, el.width, el.height);
+                } catch (e2) {
+                    console.error("Image drawing failed completely:", e2);
+                }
             }
         }
         return;

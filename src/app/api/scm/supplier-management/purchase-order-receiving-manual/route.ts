@@ -190,9 +190,10 @@ async function fetchApprovedNotReceivedPOs(base: string): Promise<POHeaderRow[]>
     const qs = [
         "limit=-1", "sort=-purchase_order_id",
         "fields=purchase_order_id,purchase_order_no,date,date_encoded,approver_id,date_approved,payment_status,inventory_status,date_received,supplier_name,total_amount,price_type",
-        "filter[_or][0][inventory_status][_eq]=3", "filter[_or][1][inventory_status][_eq]=9",
+        "filter[_or][0][inventory_status][_eq]=13", "filter[_or][1][inventory_status][_eq]=9",
         "filter[_or][2][inventory_status][_eq]=11", "filter[_or][3][inventory_status][_eq]=12",
-        "filter[inventory_status][_neq]=13",
+        "filter[_or][4][inventory_status][_eq]=3",
+        "filter[inventory_status][_neq]=6",
     ].join("&");
     const url = `${base}/items/${PO_COLLECTION}?${qs}`;
     const j = await fetchJson<{ data: POHeaderRow[] }>(url);
@@ -582,6 +583,7 @@ export async function POST(req: NextRequest) {
                     porCounts[String(ensured.porId)] = qty;
                     delete porCounts[key];
                     if (porMetaData?.[key]) { porMetaData[String(ensured.porId)] = porMetaData[key]; delete porMetaData[key]; }
+                    if (porSerials?.[key]) { porSerials[String(ensured.porId)] = porSerials[key]; delete porSerials[key]; }
                 }
             }
 
@@ -625,17 +627,32 @@ export async function POST(req: NextRequest) {
                 // ✅ Handle Serial Numbers (Piece-by-Piece registration)
                 const serials = Array.isArray(porSerials?.[porId]) ? porSerials[porId] : [];
                 if (serials.length > 0) {
-                    for (const sn of serials) {
-                        const serialPayload = {
-                            purchase_order_product_id: toNum(porId),
-                            product_id: pId,
-                            serial_no: String(sn).trim(),
-                            rfid_code: `SN-${String(sn).trim()}-${Date.now()}-${Math.random().toString(36).substring(7)}`, // Generate a temporary RFID if required by DB constraint
+                    for (const sObj of serials) {
+                        const snValue = typeof sObj === 'object' ? sObj.sn : sObj;
+                        const serialPayload: Record<string, unknown> = {
+                            purchase_order_product_id: Number(porId),
+                            product_id: Number(pId),
+                            serial_no: String(snValue).trim(),
+                            rfid_code: `M-${String(snValue).trim()}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
                         };
+                        
+                        if (typeof sObj === 'object') {
+                            if (sObj.tareWeight) serialPayload.tare_weight = toNum(sObj.tareWeight);
+                            if (sObj.expiryDate) {
+                                // Ensure date is valid for DB (YYYY-MM-DD)
+                                serialPayload.expiry_date = sObj.expiryDate;
+                            }
+                        }
+
+                        // Try to insert serial, if it fails due to duplicate RFID, it will be caught
                         await fetchJson(`${base}/items/purchase_order_receiving_items`, {
                             method: "POST",
                             body: JSON.stringify(serialPayload)
-                        }).catch(e => console.error("Serial insertion failed:", e));
+                        }).catch(e => {
+                            console.error(`Serial insertion failed for ${snValue}:`, e.message);
+                            // If it fails, we might want to try with a unique RFID fallback if it's critical
+                            // but usually we want to respect the uniqueness constraint
+                        });
                     }
                 }
             }
@@ -645,7 +662,11 @@ export async function POST(req: NextRequest) {
 
             const fully = isFullyReceived(thePoId, fLines, fPors);
             const hasRec = fPors.some(r => toStr(r.receipt_no) || toNum(r.received_quantity) > 0);
-            const nextStatus = fully ? 13 : (hasRec ? 9 : po.inventory_status);
+            const nextStatus = fully ? 6 : (hasRec ? 9 : po.inventory_status);
+            const sMap: Record<string, string> = { "1": "Requested", "3": "Approved", "6": "Received", "9": "Partially Received", "13": "For Receiving" };
+            const nStatusKey = String(nextStatus);
+            const currStatusKey = String(toNum(po.inventory_status));
+            console.log(`[RECEIVING DEBUG] PO #${thePoId} updated. nextStatus: ${sMap[nStatusKey] || "???"}(${nextStatus}) | fully: ${fully}, hasRec: ${hasRec}, currentDB: ${sMap[currStatusKey] || "???"}(${po.inventory_status})`);
 
             // ✅ Determine isInvoice status
             const poIsInvoice = (Number(getVal(po, "receiving_type", "receivingType")) === 2) || 

@@ -198,9 +198,10 @@ async function fetchApprovedNotReceivedPOs(base: string): Promise<POHeaderRow[]>
     const qs = [
         "limit=-1", "sort=-purchase_order_id",
         "fields=purchase_order_id,purchase_order_no,date,date_encoded,approver_id,date_approved,payment_status,inventory_status,date_received,supplier_name,total_amount,price_type",
-        "filter[_or][0][inventory_status][_eq]=3", "filter[_or][1][inventory_status][_eq]=9",
+        "filter[_or][0][inventory_status][_eq]=13", "filter[_or][1][inventory_status][_eq]=9",
         "filter[_or][2][inventory_status][_eq]=11", "filter[_or][3][inventory_status][_eq]=12",
-        "filter[inventory_status][_neq]=13",
+        "filter[_or][4][inventory_status][_eq]=3",
+        "filter[inventory_status][_neq]=6",
     ].join("&");
     const url = `${base}/items/${PO_COLLECTION}?${qs}`;
     const j = await fetchJson<{ data: POHeaderRow[] }>(url);
@@ -957,10 +958,11 @@ export async function POST(req: NextRequest) {
                      // ✅ Synchronize PO Header Status
                      const fully = isFullyReceived(poId, lines, porRows);
                      const hasReceipts = porRows.some((r) => toStr(r.receipt_no) || toStr(r.receipt_date) || toStr(r.received_date) || toNum(r.received_quantity) > 0);
-                     const nextStatus = fully ? 13 : (hasReceipts ? 9 : po.inventory_status);
+                     const nextStatus = fully ? 6 : (hasReceipts ? 9 : po.inventory_status);
+                     console.log(`[RFID RECEIVING DEBUG] PO #${poId} updated. nextStatus: ${nextStatus} (fully: ${fully}, hasReceipts: ${hasReceipts}, currentDB: ${po.inventory_status})`);
                      
                      // Only patch if we are truly upgrading the status
-                     if (nextStatus === 13 || nextStatus === 9) {
+                     if (nextStatus === 6 || nextStatus === 9) {
                          const patch: Record<string, unknown> = (() => {
                              const headerDiscTotal = porRows.reduce((s, r) => s + toNum((r as unknown as Record<string, unknown>).discounted_amount), 0);
                              const headerVatTotal = porRows.reduce((s, r) => s + toNum((r as unknown as Record<string, unknown>).vat_amount), 0);
@@ -975,7 +977,7 @@ export async function POST(req: NextRequest) {
                              };
                              if (receiverId) p.receiver_id = receiverId;
                              // ✅ Only set completion date if fully received
-                             if (nextStatus === 13) {
+                             if (nextStatus === 6) {
                                  p.date_received = nowISO();
                              }
                              return p;

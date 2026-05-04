@@ -1096,10 +1096,12 @@ export async function POST(req: NextRequest) {
         const poId = toNum(id);
         if (!poId) return bad("Invalid id.", 400);
 
+        console.log(`[APPROVAL DEBUG] PO #${poId} approved. Set status to 13 (For Receiving). MarkAsInvoice: ${Boolean(body?.markAsInvoice)}`);
+
         const patch: Record<string, unknown> = { 
             date_approved: new Date().toISOString(),
             receiving_type: Boolean(body?.markAsInvoice) ? 2 : 3, // Persistent flag for "Mark as Invoice"
-            inventory_status: 3, // ✅ For Receiving
+            inventory_status: 13, // ✅ For Receiving
             approver_id: body?.approver_id ?? body?.approverId ?? null, // ✅ Track who approved
             payment_type: body?.payment_type ?? body?.paymentType ?? null, // ✅ Update payment terms
 

@@ -126,10 +126,10 @@ function normalizeProduct(raw: RawProduct, fixedDiscountTypeId: string): Product
 
     const baseUnitPrice =
         Number(
+            raw?.cost_per_unit ??
             raw?.cost_price_unit ??
             raw?.priceA ??
             raw?.price_per_unit ??
-            raw?.cost_per_unit ??
             raw?.price ??
             0
         ) || 0;
