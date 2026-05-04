@@ -24,6 +24,12 @@ export type PurchaseOrder = {
   total?: number;
   net_amount?: number;
   vat_amount?: number;
+
+  // Derived flags for filtering
+  is_serialized_po?: boolean;
+  is_industrial_po?: boolean;
+  is_industrial_supplier?: boolean;
+  supplier_type?: string;
 };
 
 export type Supplier = {

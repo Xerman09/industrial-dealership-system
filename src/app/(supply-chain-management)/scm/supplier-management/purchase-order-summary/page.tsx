@@ -15,13 +15,14 @@ import { cookies } from "next/headers";
 import { getDirectusBase, directusHeaders } from "@/modules/supply-chain-management/supplier-management/purchase-order-summary/providers/fetchProviders";
 
 import PurchaseOrderSummaryModule from "@/modules/supply-chain-management/supplier-management/purchase-order-summary/PurchaseOrderSummaryModule";
+import { PurchaseOrder, Supplier, StatusRef } from "@/modules/supply-chain-management/supplier-management/purchase-order-summary/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const COOKIE_NAME = "vos_access_token";
 
-// --- JWT Helper Functions ---
+// ── JWT Helper Functions ──────────────────────────────────────────────────────
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
     try {
         const parts = token.split(".");
@@ -62,96 +63,150 @@ function buildHeaderUserFromToken(token: string | null | undefined) {
     };
 }
 
-// --- Data Fetching ---
-async function getData() {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function toNum(v: unknown): number {
+    const n = parseFloat(String(v ?? "").replace(/,/g, ""));
+    return Number.isFinite(n) ? n : 0;
+}
+
+// ── Data Fetching ─────────────────────────────────────────────────────────────
+
+// ── Data Fetching ─────────────────────────────────────────────────────────────
+async function getData(): Promise<{
+    poData: PurchaseOrder[];
+    suppliers: Supplier[];
+    paymentStatuses: StatusRef[];
+    transactionStatuses: StatusRef[];
+}> {
     try {
         const base = getDirectusBase();
         const headers = directusHeaders();
 
-        const [poRes, supRes, payRes, transRes, porRes, popRes] = await Promise.all([
-            fetch(`${base}/items/purchase_order?limit=-1`, { cache: "no-store", headers }),
-            fetch(`${base}/items/suppliers?limit=-1`, { cache: "no-store", headers }),
+        // ── Step 1: Resolve Industrial supplier IDs (division_id = 1) ──────────
+        const supRes = await fetch(
+            `${base}/items/suppliers?limit=-1&fields=id,supplier_name,supplier_type&filter[division_id][_eq]=1`,
+            { cache: "no-store", headers }
+        );
+        const supsJson = await supRes.json() as { data: Record<string, unknown>[] };
+        const allSuppliers = supsJson.data || [];
+        const industrialSupplierIds = allSuppliers.map(s => Number(s.id)).filter(Boolean);
+
+        // Short-circuit if no industrial suppliers exist
+        if (!industrialSupplierIds.length) {
+            const [payRes, transRes] = await Promise.all([
+                fetch(`${base}/items/payment_status?limit=-1`, { cache: "no-store", headers }),
+                fetch(`${base}/items/transaction_status?limit=-1`, { cache: "no-store", headers }),
+            ]);
+            return {
+                poData: [],
+                suppliers: allSuppliers as unknown as Supplier[],
+                paymentStatuses: (await payRes.json()).data || [],
+                transactionStatuses: (await transRes.json()).data || [],
+            };
+        }
+
+        const idList = industrialSupplierIds.join(",");
+
+        // ── Step 2: Fetch POs for Industrial suppliers ────
+        const poFields = [
+            "*",
+            "supplier_name.id",
+            "supplier_name.division_id",
+        ].join(",");
+
+        const [poRes, payRes, transRes, popRes, serProdRes] = await Promise.all([
+            fetch(
+                `${base}/items/purchase_order?limit=-1` +
+                `&fields=${encodeURIComponent(poFields)}` +
+                `&filter[supplier_name][_in]=${encodeURIComponent(idList)}`,
+                { cache: "no-store", headers }
+            ),
             fetch(`${base}/items/payment_status?limit=-1`, { cache: "no-store", headers }),
             fetch(`${base}/items/transaction_status?limit=-1`, { cache: "no-store", headers }),
-            fetch(`${base}/items/purchase_order_receiving?limit=-1&fields=purchase_order_product_id,purchase_order_id,received_quantity,isPosted,receipt_no`, { cache: "no-store", headers }),
-            fetch(`${base}/items/purchase_order_product?limit=-1&fields=purchase_order_product_id,purchase_order_id,quantity`, { cache: "no-store", headers }),
+            fetch(
+                `${base}/items/purchase_order_products?limit=-1` +
+                `&fields=purchase_order_product_id,purchase_order_id,product_id`,
+                { cache: "no-store", headers }
+            ),
+            fetch(
+                `${base}/items/products?limit=-1&fields=product_id&filter[is_serialized][_eq]=1`,
+                { cache: "no-store", headers }
+            ),
         ]);
 
-        const pos = await poRes.json();
-        const sups = await supRes.json();
+        const pos = await poRes.json() as { data: Record<string, unknown>[] };
         const pays = await payRes.json();
         const trans = await transRes.json();
-        const porData = await porRes.json();
         const popData = await popRes.json();
+        const serProdData = await serProdRes.json();
 
-        const allSuppliers = sups.data || [];
-        const porRows: Record<string, unknown>[] = porData.data || [];
         const popRows: Record<string, unknown>[] = popData.data || [];
+        const serializedProductIds = new Set((serProdData.data || []).map((p: Record<string, unknown>) => toNum(p.product_id)));
 
-        // Build maps: PO → total ordered qty, PO → total received qty, PO → has receipts
-        const orderedByPo = new Map<number, number>();
+        const poList = pos.data || [];
+
+        // ── Step 3: Determine is_serialized_po via purchase_order_products ────────
+        //
+        //    A PO is flagged is_serialized_po = true if any of its ordered
+        //    products have is_serialized = 1. This works for Requested (1)
+        //    POs as well as partially/fully received ones.
+        // ────────────────────────────────────────────────────────────────────────
+        const serializedPoIds = new Set<number>();
         for (const p of popRows) {
-            const poId = Number(p.purchase_order_id);
-            orderedByPo.set(poId, (orderedByPo.get(poId) || 0) + Number(p.quantity || 0));
-        }
-
-        const receivedByPo = new Map<number, number>();
-        const hasReceiptByPo = new Map<number, boolean>();
-        for (const r of porRows) {
-            const poId = Number(r.purchase_order_id);
-            receivedByPo.set(poId, (receivedByPo.get(poId) || 0) + Number(r.received_quantity || 0));
-            if (r.receipt_no || Number(r.received_quantity) > 0) {
-                hasReceiptByPo.set(poId, true);
+            const productId = toNum(p.product_id);
+            if (serializedProductIds.has(productId)) {
+                serializedPoIds.add(toNum(p.purchase_order_id));
             }
         }
 
-        // Derive accurate inventory_status for each PO
-        const poList = (pos.data || []).map((po: Record<string, unknown>) => {
-            const poId = Number(po.purchase_order_id);
-            const dbStatus = Number(po.inventory_status || 0);
-            const hasReceipt = hasReceiptByPo.get(poId) || false;
-            const totalOrdered = orderedByPo.get(poId) || 0;
-            const totalReceived = receivedByPo.get(poId) || 0;
-            const isApproved = po.date_approved || po.approver_id;
+        // ── Step 5: Enrich each PO ───────────────────────────────────────────
+        const enrichedPoList = poList.map((po: Record<string, unknown>) => {
+            const poId = toNum(po.purchase_order_id);
 
-            let effectiveStatus = dbStatus;
-            
-            // Only override if not permanently closed (14) or cancelled (7)
-            if (dbStatus !== 14 && dbStatus !== 7) {
-                // If there's receiving activity, it takes precedence
-                if (hasReceipt) {
-                    const fullyReceived = totalOrdered > 0 && totalReceived >= totalOrdered;
-                    if (fullyReceived) {
-                        // Keep as Received (6) or Closed (14) if it was already closed
-                        effectiveStatus = 6;
-                    } else {
-                        // It has some receiving activity but not fully received
-                        effectiveStatus = 9; // Partially Received
-                    }
-                } 
-                // If no receiving activity but is approved, switch to For Receiving (3)
-                else if (isApproved && (dbStatus === 1 || dbStatus === 0)) {
-                    effectiveStatus = 3; 
-                }
-            }
+            // Normalize supplier_name: Directus expands to object due to nested fields.
+            // Restore to numeric ID for frontend lookups.
+            const supplierObj = po?.supplier_name;
+            const supplierId: number =
+                typeof supplierObj === "object" && supplierObj !== null
+                    ? toNum((supplierObj as Record<string, unknown>)?.id ?? (supplierObj as Record<string, unknown>)?.supplier_id ?? 0)
+                    : toNum(supplierObj ?? 0);
+            const divisionId: number =
+                typeof supplierObj === "object" && supplierObj !== null
+                    ? toNum((supplierObj as Record<string, unknown>)?.division_id ?? 0)
+                    : 0;
+            const isIndustrialSupplier = divisionId === 1;
 
-            return { ...po, inventory_status: effectiveStatus };
+            // ── is_serialized_po ─────────────────────────────────────
+            const isSerializedPo = serializedPoIds.has(poId);
+
+            // ── Inventory status ────────────────────────────────────────────────
+            const effectiveStatus = toNum(po.inventory_status || 0);
+
+            return {
+                ...po,
+                supplier_name: supplierId || po.supplier_name,
+                inventory_status: effectiveStatus,
+                is_serialized_po: isSerializedPo,
+                is_industrial_supplier: isIndustrialSupplier,
+            };
         });
 
         return {
-            poData: poList,
-            suppliers: allSuppliers,
+            poData: enrichedPoList as PurchaseOrder[],
+            suppliers: allSuppliers as unknown as Supplier[],
             paymentStatuses: pays.data || [],
-            transactionStatuses: trans.data || []
+            transactionStatuses: trans.data || [],
         };
+
     } catch (error) {
         console.error("Fetch error:", error);
         return { poData: [], suppliers: [], paymentStatuses: [], transactionStatuses: [] };
     }
 }
 
+
 export default async function Page() {
-    // ✅ Next.js cookies() is async
+    // Next.js cookies() is async in App Router
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value ?? null;
 
@@ -160,7 +215,7 @@ export default async function Page() {
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            {/* ===== Header (Matched with Posting Page) ===== */}
+            {/* ===== Header ===== */}
             <header
                 className="
                     sticky top-2 z-50 relative
@@ -176,7 +231,6 @@ export default async function Page() {
                         orientation="vertical"
                         className="mr-2 data-[orientation=vertical]:h-4"
                     />
-
                     <Breadcrumb>
                         <BreadcrumbList>
                             <BreadcrumbItem className="hidden md:block">

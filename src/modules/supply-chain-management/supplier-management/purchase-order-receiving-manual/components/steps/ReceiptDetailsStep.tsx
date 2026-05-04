@@ -90,122 +90,137 @@ export function ReceiptDetailsStep({ onContinue }: { onContinue: () => void }) {
     };
 
     return (
-        <div className="space-y-4">
-            <Card className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="text-sm font-semibold">Selected PO Details</div>
-                    {selectedPO?.status ? (
-                        <Badge variant="secondary" className={statusBadgeClasses(selectedPO.status)}>
-                            {selectedPO.status}
-                        </Badge>
+        <div className="h-full flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin space-y-4">
+                <Card className="p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-primary">Selected PO Details</div>
+                        {selectedPO?.status ? (
+                            <Badge variant="secondary" className={statusBadgeClasses(selectedPO.status)}>
+                                {selectedPO.status}
+                            </Badge>
+                        ) : null}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                        <div className="text-slate-400 font-black uppercase tracking-widest text-[9px]">PO Number</div>
+                        <div className="text-right font-bold text-slate-700 dark:text-slate-200">{selectedPO?.poNumber ?? "—"}</div>
+
+                        <div className="text-slate-400 font-black uppercase tracking-widest text-[9px]">Supplier</div>
+                        <div className="text-right font-bold text-slate-700 dark:text-slate-200">{selectedPO?.supplier?.name ?? "—"}</div>
+
+                        <div className="text-slate-400 font-black uppercase tracking-widest text-[9px]">Delivery Branches</div>
+                        <div className="text-right font-bold text-slate-700 dark:text-slate-200">{branchesLabel}</div>
+
+                        <div className="text-slate-400 font-black uppercase tracking-widest text-[9px]">Receiving Progress</div>
+                        <div className="text-right font-bold text-slate-700 dark:text-slate-200">
+                            {progress.totalReceived} / {progress.totalExpected}
+                        </div>
+                    </div>
+
+                    {receiptHint ? (
+                        <div className="mt-4 p-2.5 rounded-lg bg-primary/5 border border-primary/10 text-[10px] font-bold text-primary flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                            {receiptHint}
+                        </div>
                     ) : null}
-                </div>
+                </Card>
 
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                    <div className="text-muted-foreground">PO Number</div>
-                    <div className="text-right font-medium">{selectedPO?.poNumber ?? "—"}</div>
-
-                    <div className="text-muted-foreground">Supplier</div>
-                    <div className="text-right font-medium">{selectedPO?.supplier?.name ?? "—"}</div>
-
-                    <div className="text-muted-foreground">Delivery Branches</div>
-                    <div className="text-right font-medium">{branchesLabel}</div>
-
-                    <div className="text-muted-foreground">Receiving Progress</div>
-                    <div className="text-right font-medium">
-                        {progress.totalReceived} / {progress.totalExpected}
-                    </div>
-                </div>
-
-                {receiptHint ? (
-                    <div className="mt-3 text-xs text-muted-foreground">{receiptHint}</div>
-                ) : null}
-            </Card>
-
-            {/* ✅ MERGED: Previous Receipts History */}
-            {selectedPO?.history && selectedPO.history.length > 0 && (
-                <Card className="p-4 border-amber-500/20 bg-amber-500/5">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                        Previous Receipts History
-                    </div>
-                    <div className="mt-3 space-y-2">
-                        {selectedPO.history.map((h: any) => (
-                            <div
-                                key={h.receiptNo}
-                                className="flex items-center justify-between gap-3 text-xs border-b border-amber-500/10 pb-2 last:border-0 last:pb-0"
-                            >
-                                <div className="flex flex-col">
-                                    <span className="font-mono font-medium text-amber-900 dark:text-amber-100">
-                                        {h.receiptNo}
-                                    </span>
-                                    <span className="text-[10px] text-amber-700/70 dark:text-amber-400/60">
-                                        {h.receiptDate || "N/A"}
-                                    </span>
+                {/* ✅ MERGED: Previous Receipts History */}
+                {selectedPO?.history && selectedPO.history.length > 0 && (
+                    <Card className="p-4 border-amber-500/20 bg-amber-500/5 shadow-sm">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                            Previous Receipts History
+                        </div>
+                        <div className="mt-3 space-y-2">
+                            {selectedPO.history.map((h: any) => (
+                                <div
+                                    key={h.receiptNo}
+                                    className="flex items-center justify-between gap-3 text-[10px] border-b border-amber-500/10 pb-2 last:border-0 last:pb-0"
+                                >
+                                    <div className="flex flex-col">
+                                        <span className="font-mono font-black text-amber-900 dark:text-amber-100">
+                                            {h.receiptNo}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-amber-700/70 dark:text-amber-400/60">
+                                            {h.receiptDate || "N/A"}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-slate-500">
+                                            {h.itemsCount} {h.itemsCount === 1 ? "item" : "items"}
+                                        </span>
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                "text-[9px] uppercase h-4 px-1 leading-none border-amber-500/30 font-black",
+                                                h.isPosted ? "bg-amber-100 text-amber-800" : "bg-white text-muted-foreground"
+                                            )}
+                                        >
+                                            {h.isPosted ? "Posted" : "Unposted"}
+                                        </Badge>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">
-                                        {h.itemsCount} {h.itemsCount === 1 ? "item" : "items"}
-                                    </span>
-                                    <Badge
-                                        variant="outline"
-                                        className={cn(
-                                            "text-[10px] uppercase h-4 px-1 leading-none border-amber-500/30",
-                                            h.isPosted ? "bg-amber-100 text-amber-800" : "bg-white text-muted-foreground"
-                                        )}
-                                    >
-                                        {h.isPosted ? "Posted" : "Unposted"}
-                                    </Badge>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                    </Card>
+                )}
+
+                <Card className="p-4 shadow-sm">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-primary">Receipt Details</div>
+                    <div className="mt-1 text-[10px] font-bold text-slate-400">
+                        Create receipt first, then continue to product verification.
+                    </div>
+
+                    <div className="mt-4 grid gap-4">
+                        <div className="grid gap-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Receipt Number *</Label>
+                            <Input 
+                                value={receiptNo} 
+                                onChange={(e) => setReceiptNo(e.target.value)} 
+                                placeholder="Enter receipt number" 
+                                className="h-10 text-sm font-bold border-2 rounded-xl focus-visible:border-primary focus-visible:ring-0"
+                            />
+                        </div>
+
+                        <div className="grid gap-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Receipt Type *</Label>
+                            <Select value={receiptType} onValueChange={setReceiptType}>
+                                <SelectTrigger className="h-10 text-sm font-bold border-2 rounded-xl focus:border-primary focus:ring-0">
+                                    <SelectValue placeholder="Select type..." />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-2 shadow-xl">
+                                    {RECEIPT_TYPES.map((t) => (
+                                        <SelectItem key={t.value} value={t.value} className="text-xs font-bold py-2.5">
+                                            {t.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid gap-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Receipt Date *</Label>
+                            <Input
+                                type="date"
+                                value={receiptDate}
+                                onChange={(e) => setReceiptDate(e.target.value)}
+                                className="h-10 text-sm font-bold border-2 rounded-xl focus-visible:border-primary focus-visible:ring-0"
+                            />
+                        </div>
                     </div>
                 </Card>
-            )}
+            </div>
 
-            <Card className="p-4">
-                <div className="text-sm font-semibold">Receipt Details</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                    Create receipt first, then continue to product verification.
-                </div>
-
-                <div className="mt-4 grid gap-4">
-                    <div className="grid gap-2">
-                        <Label>Receipt Number *</Label>
-                        <Input value={receiptNo} onChange={(e) => setReceiptNo(e.target.value)} placeholder="Enter receipt number" />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label>Receipt Type *</Label>
-                        <Select value={receiptType} onValueChange={setReceiptType}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select type..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {RECEIPT_TYPES.map((t) => (
-                                    <SelectItem key={t.value} value={t.value}>
-                                        {t.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label>Receipt Date *</Label>
-                        <Input
-                            type="date"
-                            value={receiptDate}
-                            onChange={(e) => setReceiptDate(e.target.value)}
-                        />
-                    </div>
-
-
-
-                    <Button type="button" className="w-full" onClick={handleContinue}>
-                        Continue Product Verification
-                    </Button>
-                </div>
-            </Card>
+            <div className="pt-4 shrink-0 border-t mt-4">
+                <Button 
+                    type="button" 
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.98]" 
+                    onClick={handleContinue}
+                >
+                    Continue Product Verification
+                </Button>
+            </div>
         </div>
     );
 }

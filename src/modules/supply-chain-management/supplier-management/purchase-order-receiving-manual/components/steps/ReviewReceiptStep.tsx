@@ -4,10 +4,10 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, QrCode } from "lucide-react";
-import { useReceivingProductsManual, ReceivingPOItem } from "../../providers/ReceivingProductsManualProvider";
+import { ChevronLeft, ChevronRight, QrCode, CheckCircle2 } from "lucide-react";
+import { useReceivingProductsManual, ReceivingPOItem, ReceiptSavedInfo } from "../../providers/ReceivingProductsManualProvider";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ReceiptPreviewModal } from "../ReceiptPreviewModal";
@@ -232,269 +232,236 @@ export function ReviewReceiptStep({ onBack, receiverName }: { onBack: () => void
         return { gross, discount, net, vatAmount, whtAmount, grandTotal, isExclusive };
     }, [allItems, safeCounts, selectedPO?.priceType]);
 
+    const previewData = React.useMemo<ReceiptSavedInfo>(() => {
+        if (receiptSaved) return { ...receiptSaved, receiverName };
+        return {
+            poId: selectedPO?.id || "",
+            receiptNo: "PREVIEW",
+            receiptDate: "PREVIEW",
+            receiptType: "PREVIEW",
+            isFullyReceived: totalEntered >= totalExpected,
+            savedAt: 0,
+            receiverName,
+            items: allItems.map(it => ({
+                name: it.name,
+                barcode: it.barcode,
+                productId: it.productId || "",
+                uom: it.uom || "",
+                unitPrice: Number(it.unitPrice) || 0,
+                discountAmount: Number(it.discountAmount) || 0,
+                batchNo: "",
+                lotId: "",
+                expiryDate: expiryDates[String(it.id)] || "",
+                expectedQty: Number(it.expectedQty) || 0,
+                receivedQtyAtStart: 0,
+                receivedQtyNow: safeCounts[String(it.id)] ?? 0,
+                rfids: serialsByPorId[String(it.id)] || []
+            }))
+        };
+    }, [receiptSaved, receiverName, selectedPO, totalEntered, totalExpected, allItems, expiryDates, safeCounts, serialsByPorId]);
+
     return (
-        <div className="space-y-4">
+        <div className="h-full flex flex-col overflow-hidden">
             {receiptSaved ? (
-                <Card className="p-6 border-green-500 shadow-md">
-                    <h3 className="text-xl font-bold mb-2">Receipt Saved!</h3>
-                    <p className="text-sm mb-4">You have successfully received items for {selectedPO?.poNumber}.</p>
-                    <div className="flex gap-4">
-                        <Button onClick={() => window.location.reload()} variant="outline">Start New Session</Button>
-                        <Button onClick={() => setPreviewOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">Print Receipt</Button>
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-500">
+                    <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border-2 border-emerald-500/20">
+                        <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                     </div>
-                </Card>
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white mb-2">Receipt Saved Successfully!</h3>
+                    <p className="text-sm text-slate-500 font-bold max-w-md mb-8 uppercase tracking-wider">
+                        You have successfully received items for {selectedPO?.poNumber}. The inventory has been updated.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+                        <Button onClick={() => window.location.reload()} variant="outline" className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-[10px] border-2">Start New Session</Button>
+                        <Button onClick={() => setPreviewOpen(true)} className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-[10px] bg-primary shadow-lg shadow-primary/20">Print Receipt</Button>
+                    </div>
+                </div>
             ) : (
-                <Card className="p-4">
-                    <div className="mb-4 flex justify-between items-center">
-                        <div className="text-sm font-semibold">Final Review & Details</div>
-                        <Button variant="ghost" size="sm" onClick={onBack}>← Back to Entry</Button>
+                <>
+                    <div className="shrink-0 flex items-center justify-between mb-4 px-1">
+                        <div className="flex flex-col gap-0.5">
+                            <div className="text-[10px] font-black text-primary uppercase tracking-widest">Final Review & Details</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Review items before finalizing receipt</div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={onBack} className="h-8 rounded-lg font-black uppercase text-[9px] tracking-widest text-slate-400 hover:text-primary">
+                            <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Back to Entry
+                        </Button>
                     </div>
 
-                    <div className="border rounded-md">
-                        <Table>
-                            <TableHeader className="bg-muted">
-                                <TableRow>
-                                    <TableHead className="text-[10px] uppercase">Product Name</TableHead>
-                                    <TableHead className="text-[10px] uppercase">Expiry</TableHead>
-                                    <TableHead className="text-[10px] uppercase text-right">Unit Price</TableHead>
-                                    <TableHead className="text-[10px] uppercase text-center">Disc. Type</TableHead>
-                                    <TableHead className="text-[10px] uppercase text-right">Disc. Amt</TableHead>
-                                    <TableHead className="text-[10px] uppercase text-right">Net Amt</TableHead>
-                                    <TableHead className="text-[10px] uppercase text-center">Expected</TableHead>
-                                    <TableHead className="text-[10px] uppercase text-center">Entered</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {(() => {
-                                    const PAGE_SIZE = 10;
-                                    const paginatedItems = allItems.slice((reviewPage - 1) * PAGE_SIZE, reviewPage * PAGE_SIZE);
-                                    return paginatedItems.map((it: ReceivingPOItem) => {
-                                        const porId = String(it.id);
-                                        const count = safeCounts[porId] ?? 0;
-                                        const expected = Number(it.expectedQty || 0);
-                                        const receivedAtStart = Number(it.receivedQty || 0);
-                                        const unitP = Number(it.unitPrice || 0);
-                                        const discA = Number(it.discountAmount || 0);
-                                        const effectivePrice = Math.max(0, unitP - discA);
-                                        const lineTotal = count * effectivePrice;
+                    <Card className="flex-1 overflow-hidden shadow-sm border-slate-200 dark:border-slate-800 rounded-xl flex flex-col">
+                        <div className="flex-1 overflow-y-auto scrollbar-thin">
+                            <Table>
+                                <TableHeader className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-20">
+                                    <TableRow className="hover:bg-transparent border-slate-200">
+                                        <TableHead className="text-[9px] h-9 font-black uppercase tracking-widest text-slate-500 px-4">Product Details</TableHead>
+                                        <TableHead className="text-[9px] h-9 font-black uppercase tracking-widest text-slate-500">Expiry</TableHead>
+                                        <TableHead className="text-[9px] h-9 font-black uppercase tracking-widest text-right text-slate-500">Price</TableHead>
+                                        <TableHead className="text-[9px] h-9 font-black uppercase tracking-widest text-center w-20 text-slate-500">Qty</TableHead>
+                                        <TableHead className="text-[9px] h-9 font-black uppercase tracking-widest text-right px-4 text-slate-500">Total</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {(() => {
+                                        const PAGE_SIZE = 10;
+                                        const paginatedItems = allItems.slice((reviewPage - 1) * PAGE_SIZE, reviewPage * PAGE_SIZE);
+                                        return paginatedItems.map((it: ReceivingPOItem) => {
+                                            const porId = String(it.id);
+                                            const count = (manualCounts[porId] || 0);
+                                            const expected = Number(it.expectedQty || 0);
+                                            const receivedAtStart = Number(it.receivedQty || 0);
+                                            const unitP = Number(it.unitPrice || 0);
+                                            const discA = Number(it.discountAmount || 0);
+                                            const effectivePrice = Math.max(0, unitP - discA);
+                                            const lineTotal = count * effectivePrice;
+                                            const isOver = (count + receivedAtStart) > expected && count > 0;
 
-                                        // Validate Over Receiving
-                                        const isOver = (count + receivedAtStart) > expected && count > 0;
-
-                                        return (
-                                            <TableRow key={porId} className={cn(isOver && "bg-red-50/50 dark:bg-red-950/20")}>
-                                                <TableCell>
-                                                    <div className="font-bold text-xs">
-                                                        {it.name}
-                                                        {isOver && <span className="text-[10px] text-red-600 dark:text-red-400 ml-2 uppercase font-black tracking-tighter" title="Quantity exceeds ordered amount">⚠️ OVER</span>}
-                                                    </div>
-                                                    <div className="text-[9px] text-muted-foreground font-mono">SKU: {it.barcode} | UOM: {it.uom}</div>
-                                                    {it.isSerialized && (
-                                                        <div className="mt-2 space-y-1">
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                                {(serialsByPorId[porId] || []).map((sns, i) => (
-                                                                    <div key={i} className="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-1.5 py-0.5 gap-2 shadow-sm">
-                                                                        <span className="text-[10px] font-mono font-black text-slate-700 dark:text-slate-200 uppercase tracking-tighter">{sns.sn}</span>
-                                                                        <div className="flex items-center gap-1 border-l pl-1.5 border-slate-200 dark:border-slate-700">
-                                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Tare:</span>
-                                                                            <span className="text-[9px] font-bold text-slate-600">{sns.tareWeight || "-"}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1 border-l pl-1.5 border-slate-200 dark:border-slate-700">
-                                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Exp:</span>
-                                                                            <span className="text-[9px] font-bold text-slate-600">{sns.expiryDate || "-"}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
+                                            return (
+                                                <TableRow key={porId} className={cn(
+                                                    "border-slate-100 dark:border-slate-900 group",
+                                                    isOver ? "bg-red-50/30 dark:bg-red-500/5" : "hover:bg-slate-50/50"
+                                                )}>
+                                                    <TableCell className="py-3 px-4">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <div className="font-black text-xs text-slate-700 dark:text-slate-200">
+                                                                {it.name}
+                                                                {isOver && <Badge className="ml-2 bg-red-600 text-[6px] font-black h-3.5 px-1 uppercase border-none">Over</Badge>}
                                                             </div>
-                                                            {(serialsByPorId[porId] || []).length === 0 && (
-                                                                <span className="text-[10px] text-red-500 font-bold italic flex items-center gap-1">
-                                                                    <QrCode className="w-3 h-3" /> Missing Serials
-                                                                </span>
+                                                            <div className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-tighter">SKU: {it.barcode} | UOM: {it.uom}</div>
+                                                            {it.isSerialized && (
+                                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                                    {(serialsByPorId[porId] || []).map((sns, i) => (
+                                                                        <div key={i} className="flex items-center bg-slate-100/50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-1.5 py-0.5 gap-1.5">
+                                                                            <span className="text-[8px] font-mono font-black text-slate-700 dark:text-slate-200 uppercase">{sns.sn}</span>
+                                                                            <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter border-l pl-1.5 border-slate-200 dark:border-slate-700">{sns.tareWeight}kg</span>
+                                                                        </div>
+                                                                    ))}
+                                                                    {(serialsByPorId[porId] || []).length === 0 && (
+                                                                        <span className="text-[9px] text-red-500 font-black uppercase tracking-tighter flex items-center gap-1">
+                                                                            <QrCode className="w-2.5 h-2.5" /> Missing Serials
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="min-w-[130px]">
-                                                    {it.isSerialized ? (
-                                                        <span className="text-[10px] font-bold text-slate-400 italic">Encoded per serial</span>
-                                                    ) : (
-                                                        <Input 
-                                                            type="date" 
-                                                            className={cn(
-                                                                "h-8 text-[11px]",
-                                                                showErrors && count > 0 && !(expiryDates[porId] || "").trim() && "border-red-500 ring-1 ring-red-500",
-                                                                isOver && "border-red-200 dark:border-red-900"
-                                                            )}
-                                                            value={expiryDates[porId] || ""} 
-                                                            onChange={(e) => setExpiryDates(prev => ({ ...prev, [porId]: e.target.value }))} 
-                                                        />
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right text-xs">{formatPHP(unitP)}</TableCell>
-                                                <TableCell className="text-center text-[10px] text-muted-foreground">{it.discountType}</TableCell>
-                                                <TableCell className="text-right text-xs text-red-600 dark:text-red-400 font-medium">{(discA || 0) > 0 ? `${formatPHP(discA * count)}` : "—"}</TableCell>
-                                                <TableCell className="text-right font-bold text-xs">{formatPHP(lineTotal)}</TableCell>
-                                                <TableCell className="text-center font-bold text-xs">
-                                                    {expected}
-                                                    {receivedAtStart > 0 && <div className="text-[9px] font-normal text-muted-foreground">(Prev: {receivedAtStart})</div>}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant={isOver ? "destructive" : "default"} className={cn("h-5", isOver && "bg-red-600 dark:bg-red-700")}>
-                                                        {count}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    });
-                                })()}
-                            </TableBody>
-                            <TableFooter className="bg-muted/10">
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-right text-[10px] font-bold uppercase">Subtotal</TableCell>
-                                    <TableCell className="text-right font-black text-slate-800">{formatPHP(financials.gross)}</TableCell>
-                                    <TableCell className="text-center font-bold">{totalExpected}</TableCell>
-                                    <TableCell className="text-center font-black">{totalEntered}</TableCell>
-                                </TableRow>
-                            </TableFooter>
-                        </Table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {allItems.length > 10 && (
-                        <div className="flex items-center justify-between px-4 py-3 border rounded-md bg-muted/10 mt-2">
-                            <span className="text-xs text-muted-foreground font-medium">
-                                Showing {(reviewPage - 1) * 10 + 1}–{Math.min(reviewPage * 10, allItems.length)} of {allItems.length} items
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setReviewPage(p => Math.max(1, p - 1))} disabled={reviewPage === 1}>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <span className="text-xs font-bold px-2">
+                                                    </TableCell>
+                                                    <TableCell className="py-2">
+                                                        {it.isSerialized ? (
+                                                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Serial-Linked</span>
+                                                        ) : (
+                                                            <Input 
+                                                                type="date" 
+                                                                className={cn(
+                                                                    "h-7 text-[10px] font-bold border-2 rounded-lg w-32 focus-visible:border-primary focus-visible:ring-0",
+                                                                    showErrors && count > 0 && !(expiryDates[porId] || "").trim() && "border-red-500"
+                                                                )}
+                                                                value={expiryDates[porId] || ""} 
+                                                                onChange={(e) => setExpiryDates(prev => ({ ...prev, [porId]: e.target.value }))} 
+                                                            />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-bold text-[10px] text-slate-600">{formatPHP(unitP)}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge className={cn("h-5 px-2 font-black text-[10px]", isOver ? "bg-red-500" : "bg-primary")}>
+                                                            {count}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-black text-xs px-4">{formatPHP(lineTotal)}</TableCell>
+                                                </TableRow>
+                                            );
+                                        });
+                                    })()}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        
+                        {allItems.length > 10 && (
+                            <div className="shrink-0 p-3 bg-slate-50 dark:bg-slate-900 border-t flex items-center justify-between">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
                                     Page {reviewPage} of {Math.ceil(allItems.length / 10)}
                                 </span>
-                                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setReviewPage(p => Math.min(Math.ceil(allItems.length / 10), p + 1))} disabled={reviewPage === Math.ceil(allItems.length / 10)}>
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" className="h-7 rounded-lg font-black uppercase text-[9px] tracking-widest px-3" onClick={() => setReviewPage(p => Math.max(1, p - 1))} disabled={reviewPage === 1}>
+                                        <ChevronLeft className="w-3 h-3 mr-1" /> Prev
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="h-7 rounded-lg font-black uppercase text-[9px] tracking-widest px-3" onClick={() => setReviewPage(p => Math.min(Math.ceil(allItems.length / 10), p + 1))} disabled={reviewPage === Math.ceil(allItems.length / 10)}>
+                                        Next <ChevronRight className="w-3 h-3 ml-1" />
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    )}
-
-                    <div className="mt-4 flex flex-col md:flex-row justify-end gap-6 border-t pt-4">
-                        <div className="flex-1 max-w-sm ml-auto space-y-2 text-sm">
-                            <div className="flex justify-between items-center text-slate-600">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Gross Amount:</span>
-                                <span className="font-bold text-slate-700">{formatPHP(financials.gross)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-red-600">
-                                <span className="text-[11px] font-bold uppercase tracking-wider">Discount:</span>
-                                <span className="font-bold">{formatPHP(financials.discount)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-slate-600 pb-2 border-b">
-                                <span className="text-[11px] font-bold uppercase tracking-wider">Net Amount:</span>
-                                <span className="font-bold text-slate-700">{formatPHP(financials.net)}</span>
-                            </div>
-                            {selectedPO?.isInvoice && (
-                                <>
-                                    <div className="flex justify-between items-center text-slate-600">
-                                        <span className="text-[11px] font-bold uppercase tracking-wider">VAT Details:</span>
-                                        <span className="font-bold text-slate-700">{financials.isExclusive ? "+" : ""}{formatPHP(financials.vatAmount)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-red-600 pb-2 border-b">
-                                        <span className="text-[11px] font-bold uppercase tracking-wider">EWT:</span>
-                                        <span className="font-bold">{formatPHP(financials.whtAmount)}</span>
-                                    </div>
-                                </>
-                            )}
-                            <div className="flex justify-between items-center pt-4">
-                                <span className="font-black text-sm uppercase tracking-widest text-slate-900 underline decoration-indigo-500 underline-offset-4">Grand Total:</span>
-                                <span className="font-black text-xl text-indigo-600 drop-shadow-sm">{formatPHP(financials.grandTotal)}</span>
-                            </div>
-                            {selectedPO?.isInvoice && (
-                                <p className="text-[10px] text-muted-foreground mt-2 italic leading-tight text-right">
-                                    Note: VAT and EWT figures are for reference and have not been deducted from the total.
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                        )}
+                    </Card>
 
                     {(clientSaveError || saveError) && (
-                        <div className="mt-4 p-2 bg-red-50 text-red-600 text-sm font-semibold text-center border border-red-200 rounded-md">
+                        <div className="mt-4 p-2 bg-red-50 text-red-600 text-[10px] font-black uppercase text-center border-2 border-red-200 rounded-xl">
                             {clientSaveError || saveError}
                         </div>
                     )}
 
-                    <div className="mt-4 flex justify-end gap-3">
-                        <Button
-                            variant="outline"
-                            className="h-10 px-6 text-xs font-black uppercase tracking-widest border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                            onClick={() => setPreviewOpen(true)}
-                        >
-                            Print Preview / Export PDF
-                        </Button>
-                        <Button
-                            className="bg-indigo-600 hover:bg-indigo-700 h-10 px-8 text-xs font-black uppercase tracking-widest"
-                            onClick={handleSaveReceipt}
-                            disabled={savingReceipt}
-                        >
-                            {savingReceipt ? "Saving..." : "Save Final Receipt"}
-                        </Button>
+                    <div className="shrink-0 mt-4 space-y-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {[
+                                { label: "Subtotal", val: financials.gross, color: "text-slate-500" },
+                                { label: "Discounts", val: financials.discount, color: "text-red-500" },
+                                { label: "VAT Amount", val: financials.vatAmount, color: "text-slate-500" },
+                                { label: "Grand Total", val: financials.grandTotal, color: "text-primary", bold: true },
+                            ].map((fin, i) => (
+                                <div key={i} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 flex flex-col gap-0.5">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">{fin.label}</span>
+                                    <span className={cn("text-xs font-black", fin.color)}>{formatPHP(fin.val)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-[10px] border-2"
+                                onClick={() => setPreviewOpen(true)}
+                            >
+                                Preview Receipt
+                            </Button>
+                            <Button
+                                className="flex-[2] h-12 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.98]"
+                                onClick={handleSaveReceipt}
+                                disabled={savingReceipt}
+                            >
+                                {savingReceipt ? "Processing..." : "Finalize & Save Receipt"}
+                            </Button>
+                        </div>
                     </div>
-                </Card>
-            )}
 
-            {(receiptSaved || selectedPO) && (
-                <ReceiptPreviewModal
-                    isOpen={previewOpen}
-                    onClose={() => setPreviewOpen(false)}
-                    data={receiptSaved ? { ...receiptSaved, receiverName } : {
-                        poId: selectedPO?.id || "",
-                        receiptNo: "PREVIEW",
-                        receiptDate: "PREVIEW",
-                        receiptType: "PREVIEW",
-                        isFullyReceived: totalEntered >= totalExpected,
-                        savedAt: 0,
-                        receiverName,
-                        items: allItems.map(it => ({
-                            name: it.name,
-                            barcode: it.barcode,
-                            productId: it.productId || "",
-                            uom: it.uom || "",
-                            unitPrice: Number(it.unitPrice) || 0,
-                            discountAmount: Number(it.discountAmount) || 0,
-                            batchNo: "",
-                            lotId: "",
-                            expiryDate: expiryDates[String(it.id)] || "",
-                            expectedQty: Number(it.expectedQty) || 0,
-                            receivedQtyAtStart: 0,
-                            receivedQtyNow: safeCounts[String(it.id)] ?? 0,
-                            rfids: serialsByPorId[String(it.id)] || []
-                        }))
-                    }}
-                    poNumber={selectedPO?.poNumber || "N/A"}
-                    supplierName={selectedPO?.supplier?.name || "N/A"}
-                    priceType={selectedPO?.priceType || "VAT Inclusive"}
-                    isInvoice={receiptSaved?.isInvoice ?? selectedPO?.isInvoice ?? false}
-                />
-            )}
+                    {previewOpen && (selectedPO || receiptSaved) && (
+                        <ReceiptPreviewModal
+                            isOpen={previewOpen}
+                            onClose={() => setPreviewOpen(false)}
+                            data={previewData}
+                            poNumber={selectedPO?.poNumber || "N/A"}
+                            supplierName={selectedPO?.supplier?.name || "N/A"}
+                            priceType={selectedPO?.priceType || "VAT Inclusive"}
+                            isInvoice={!!((receiptSaved as ReceiptSavedInfo | null)?.isInvoice ?? selectedPO?.isInvoice)}
+                        />
+                    )}
 
-            {/* ✅ Partial Receipt Confirmation Modal */}
-            <AlertDialog open={isPartialModalOpen} onOpenChange={setIsPartialModalOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Incomplete Receiving</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            The receiving of this PO is incomplete. To proceed is to make this PO a partial receipt.
-                            Do you want to continue?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={executeSave} className="bg-indigo-600 hover:bg-indigo-700">
-                            Proceed as Partial
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                    {/* ✅ Partial Receipt Confirmation Modal */}
+                    <AlertDialog open={isPartialModalOpen} onOpenChange={setIsPartialModalOpen}>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Incomplete Receiving</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    The receiving of this PO is incomplete. To proceed is to make this PO a partial receipt.
+                                    Do you want to continue?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={executeSave} className="bg-indigo-600 hover:bg-indigo-700">
+                                    Proceed as Partial
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </>
+            )}
         </div>
     );
 }

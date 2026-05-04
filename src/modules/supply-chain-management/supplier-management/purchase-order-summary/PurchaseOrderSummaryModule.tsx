@@ -82,7 +82,10 @@ export default function PurchaseOrderSummaryModule({
   const [filterSupplier, setFilterSupplier] = useState("all");
   const [filterInvStatus, setFilterInvStatus] = useState("all");
   const [filterPayStatus, setFilterPayStatus] = useState("all");
-  const [filterTransType, setFilterTransType] = useState("1");
+  const [filterTransType, setFilterTransType] = useState("all");
+  const [filterIndustrial, setFilterIndustrial] = useState("all");
+  const [filterSerialized, setFilterSerialized] = useState("yes"); // Only show serialized POs by default
+  const [filterIndustrialSupplier, setFilterIndustrialSupplier] = useState("all");
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -208,9 +211,13 @@ export default function PurchaseOrderSummaryModule({
 
       const matchesDate = (!dateFrom || item.date >= dateFrom) && (!dateTo || item.date <= dateTo);
 
-      return matchesSearch && matchesSupplier && matchesInv && matchesPay && matchesTrans && matchesDate;
+      const matchesIndustrial = filterIndustrial === "all" || (filterIndustrial === "yes" ? item.is_industrial_po : !item.is_industrial_po);
+      const matchesSerialized = filterSerialized === "all" || (filterSerialized === "yes" ? item.is_serialized_po : !item.is_serialized_po);
+      const matchesIndustrialSupplier = filterIndustrialSupplier === "all" || (filterIndustrialSupplier === "yes" ? item.is_industrial_supplier : !item.is_industrial_supplier);
+
+      return matchesSearch && matchesSupplier && matchesInv && matchesPay && matchesTrans && matchesDate && matchesIndustrial && matchesSerialized && matchesIndustrialSupplier;
     });
-  }, [searchTerm, filterSupplier, filterInvStatus, filterPayStatus, filterTransType, sortedPoData, dateFrom, dateTo, suppliers]);
+  }, [searchTerm, filterSupplier, filterInvStatus, filterPayStatus, filterTransType, filterIndustrial, filterSerialized, filterIndustrialSupplier, sortedPoData, dateFrom, dateTo, suppliers]);
 
   const previewTotals = useMemo(() => {
     return filteredData.reduce(
@@ -235,6 +242,9 @@ export default function PurchaseOrderSummaryModule({
       setFilterInvStatus("all");
       setFilterPayStatus("all");
       setFilterTransType("all");
+      setFilterIndustrial("all");
+      setFilterSerialized("all");
+      setFilterIndustrialSupplier("all");
       setDateFrom("");
       setDateTo("");
     });
@@ -362,11 +372,19 @@ export default function PurchaseOrderSummaryModule({
       header: "PO Number",
       cell: ({ row }) => {
         return (
-          <div
-            className="font-bold text-primary hover:underline cursor-pointer"
-            onClick={() => setSelectedPO(row.original)}
-          >
+          <div className="font-bold text-primary flex items-center gap-2">
             {row.original.purchase_order_no}
+            <div className="flex gap-1">
+              {row.original.is_industrial_po && (
+                <Badge variant="outline" className="text-[8px] px-1 h-3.5 font-black bg-blue-50 text-blue-600 border-blue-200 uppercase">IND</Badge>
+              )}
+              {row.original.is_serialized_po && (
+                <Badge variant="outline" className="text-[8px] px-1 h-3.5 font-black bg-emerald-50 text-emerald-600 border-emerald-200 uppercase">SER</Badge>
+              )}
+              {row.original.is_industrial_supplier && (
+                <Badge variant="outline" className="text-[8px] px-1 h-3.5 font-black bg-purple-50 text-purple-600 border-purple-200 uppercase">IND SUP</Badge>
+              )}
+            </div>
           </div>
         );
       },
@@ -525,7 +543,65 @@ export default function PurchaseOrderSummaryModule({
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="1">Trade</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Product Classification */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-bold uppercase text-muted-foreground/70 ml-1">Product Category</span>
+                {isInitialLoad ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={filterIndustrial} onValueChange={(v) => { handleFilterChange(() => setFilterIndustrial(v)); }}>
+                    <SelectTrigger className="h-10 text-xs bg-background border-border">
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="yes">Industrial Only</SelectItem>
+                      <SelectItem value="no">Non-Industrial Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Serialization Filter */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-bold uppercase text-muted-foreground/70 ml-1">Serialization</span>
+                {isInitialLoad ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={filterSerialized} onValueChange={(v) => { handleFilterChange(() => setFilterSerialized(v)); }}>
+                    <SelectTrigger className="h-10 text-xs bg-background border-border">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="yes">Serialized Only</SelectItem>
+                      <SelectItem value="no">Non-Serialized Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* Industrial Supplier Filter */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-bold uppercase text-muted-foreground/70 ml-1">Supplier Type</span>
+                {isInitialLoad ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={filterIndustrialSupplier} onValueChange={(v) => { handleFilterChange(() => setFilterIndustrialSupplier(v)); }}>
+                    <SelectTrigger className="h-10 text-xs bg-background border-border">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="yes">Industrial Supplier</SelectItem>
+                      <SelectItem value="no">Trade/Other</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -602,6 +678,7 @@ export default function PurchaseOrderSummaryModule({
         isLoading={isLoading}
         searchKey="purchase_order_no"
         emptyTitle="No purchase orders found matching your filters."
+        onRowClick={setSelectedPO}
       />
 
       {/* MODAL POP-UP FOR ROW DETAILS */}
