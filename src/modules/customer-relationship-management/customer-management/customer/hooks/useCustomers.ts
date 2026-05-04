@@ -74,7 +74,7 @@ export function useCustomers(): UseCustomersReturn {
 
             // Parallel fetch for customers and user mapping if not loaded
             const [customerRes, userRes] = await Promise.all([
-                fetch(`/api/crm/customer?${params.toString()}`, { cache: "no-store" }),
+                fetch(`/api/crm/customer-registration?${params.toString()}`, { cache: "no-store" }),
                 fetch("/api/crm/customer/references?type=user", { cache: "no-store" })
             ]);
 
@@ -130,7 +130,7 @@ export function useCustomers(): UseCustomersReturn {
     const createCustomer = useCallback(async (data: Partial<CustomerWithRelations>) => {
         try {
             const { bank_accounts, ...customerData } = data;
-            const res = await fetch("/api/crm/customer", {
+            const res = await fetch("/api/crm/customer-registration", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(customerData),
@@ -177,7 +177,7 @@ export function useCustomers(): UseCustomersReturn {
             const { bank_accounts: newAccounts, ...customerData } = data;
 
             // 1. Update primary customer data
-            const res = await fetch("/api/crm/customer", {
+            const res = await fetch("/api/crm/customer-registration", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id, ...customerData }),

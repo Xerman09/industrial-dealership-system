@@ -66,7 +66,7 @@ export function CreatableCombobox({
                 </FormControl>
             </PopoverTrigger>
             <PopoverContent 
-                className="w-[300px] p-0 shadow-xl rounded-xl border-border/50"
+                className="w-75 p-0 shadow-xl rounded-xl border-border/50"
                 onWheel={(e) => e.stopPropagation()}
                 onWheelCapture={(e) => e.stopPropagation()}
                 align="start"
@@ -78,7 +78,7 @@ export function CreatableCombobox({
                         className="h-11" 
                     />
                     <CommandList 
-                        className="max-h-[200px] overflow-y-auto custom-scrollbar"
+                        className="max-h-50 overflow-y-auto custom-scrollbar"
                         onWheel={(e) => e.stopPropagation()}
                         onWheelCapture={(e) => e.stopPropagation()}
                     >

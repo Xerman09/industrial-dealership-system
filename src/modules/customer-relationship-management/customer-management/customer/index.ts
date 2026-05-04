@@ -1,3 +1,3 @@
-export { default as CustomerModule } from "./CustomerModule";
+export { default as CustomerRegistration } from "./CustomerRegistration";
 export * from "./types";
 export * from "./hooks/useCustomers";

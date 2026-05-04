@@ -458,7 +458,7 @@ export async function POST(req: NextRequest) {
     if (!patchRes.ok) return NextResponse.json(createJson.data);
     return NextResponse.json((await patchRes.json()).data);
   } catch (error) {
-    console.error("Customer create error:", error);
+    console.error("Customer history create error:", error);
     return NextResponse.json(
       { error: "Failed to create customer" },
       { status: 500 },
@@ -552,7 +552,7 @@ export async function PATCH(req: NextRequest) {
     if (!res.ok) throw new Error(`Directus customer update failed`);
     return NextResponse.json((await res.json()).data);
   } catch (error) {
-    console.error("Customer update error:", error);
+    console.error("Customer history update error:", error);
     return NextResponse.json(
       { error: "Failed to update customer" },
       { status: 500 },
@@ -576,7 +576,7 @@ export async function DELETE(req: NextRequest) {
     if (!res.ok) throw new Error(`Failed to delete customer`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Customer delete error:", error);
+    console.error("Customer history delete error:", error);
     return NextResponse.json(
       { error: "Failed to delete customer" },
       { status: 500 },

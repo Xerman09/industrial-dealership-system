@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CreditCard, Loader2, Users, Building2, MapPin, Receipt, Check, ChevronsUpDown, Plus, AlertCircle, ArrowRight, UploadCloud } from "lucide-react";
-import { useForm, Resolver, SubmitHandler } from "react-hook-form";
+import { useForm, useWatch, Resolver, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,7 +73,7 @@ const renderImagePreview = (imageId: string | null | undefined) => {
     const imageUrl = isUrl ? imageId : `${baseUrl}/assets/${imageId}`;
 
     return (
-        <div className="mt-4 relative w-full sm:w-[250px] aspect-video rounded-xl overflow-hidden border border-border shadow-sm group bg-muted/30">
+        <div className="mt-4 relative w-full sm:w-62.5 aspect-video rounded-xl overflow-hidden border border-border shadow-sm group bg-muted/30">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
                 src={imageUrl}
@@ -83,7 +83,7 @@ const renderImagePreview = (imageId: string | null | undefined) => {
                     (e.target as HTMLImageElement).src = "https://placehold.co/400x300/e2e8f0/64748b?text=Image+Not+Found";
                 }}
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 pt-6">
+            <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent p-2 pt-6">
                 <p className="text-[9px] font-black uppercase tracking-widest text-white truncate">
                     Store Image
                 </p>
@@ -95,7 +95,7 @@ const renderImagePreview = (imageId: string | null | undefined) => {
 // ============================================================================
 // CREATABLE COMBOBOX
 // ============================================================================
-function CreatableCombobox({items, value, onChange, onCreate, placeholder, itemName}: CreatableComboboxProps) {
+function CreatableCombobox({ items, value, onChange, onCreate, placeholder, itemName }: CreatableComboboxProps) {
     const [open, setOpen] = useState(false);
     const [inputValue, setInputValue] = useState("");
     const selectedItem = items.find((i) => String(i.id) === String(value));
@@ -106,27 +106,27 @@ function CreatableCombobox({items, value, onChange, onCreate, placeholder, itemN
             <PopoverTrigger asChild>
                 <FormControl>
                     <Button variant="outline" role="combobox"
-                            className={cn("w-full h-11 justify-between bg-muted/30", !value && "text-muted-foreground")}>
+                        className={cn("w-full h-11 justify-between bg-muted/30", !value && "text-muted-foreground")}>
                         {selectedItem ? selectedItem.name : placeholder}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0 shadow-xl rounded-xl border-border/50">
+            <PopoverContent className="w-75 p-0 shadow-xl rounded-xl border-border/50">
                 <Command className="bg-transparent overflow-hidden rounded-xl">
                     <CommandInput placeholder={`Search or create ${itemName}...`} onValueChange={setInputValue}
-                                  className="h-11"/>
-                    <CommandList className="max-h-[200px] overflow-y-auto custom-scrollbar">
+                        className="h-11" />
+                    <CommandList className="max-h-50 overflow-y-auto custom-scrollbar">
                         <CommandEmpty className="p-2">
                             {inputValue && !exactMatch ? (
                                 <Button variant="ghost"
-                                        className="w-full justify-start text-primary text-xs font-bold uppercase tracking-widest"
-                                        onClick={() => {
-                                            onCreate(inputValue);
-                                            setInputValue("");
-                                            setOpen(false);
-                                        }}>
-                                    <Plus className="mr-2 h-4 w-4"/> Create &quot;{inputValue}&quot;
+                                    className="w-full justify-start text-primary text-xs font-bold uppercase tracking-widest"
+                                    onClick={() => {
+                                        onCreate(inputValue);
+                                        setInputValue("");
+                                        setOpen(false);
+                                    }}>
+                                    <Plus className="mr-2 h-4 w-4" /> Create &quot;{inputValue}&quot;
                                 </Button>
                             ) : `No ${itemName} found.`}
                         </CommandEmpty>
@@ -141,7 +141,7 @@ function CreatableCombobox({items, value, onChange, onCreate, placeholder, itemN
                                     }}
                                 >
                                     <Check
-                                        className={cn("mr-2 h-4 w-4 text-primary", String(value) === String(item.id) ? "opacity-100" : "opacity-0")}/>
+                                        className={cn("mr-2 h-4 w-4 text-primary", String(value) === String(item.id) ? "opacity-100" : "opacity-0")} />
                                     {item.name}
                                 </CommandItem>
                             ))}
@@ -156,7 +156,7 @@ function CreatableCombobox({items, value, onChange, onCreate, placeholder, itemN
 // ============================================================================
 // API-DRIVEN SEARCHABLE COMBOBOX
 // ============================================================================
-function SearchableCombobox({items, value, onChange, placeholder, disabled, isLoading}: SearchableComboboxProps) {
+function SearchableCombobox({ items, value, onChange, placeholder, disabled, isLoading }: SearchableComboboxProps) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -170,17 +170,17 @@ function SearchableCombobox({items, value, onChange, placeholder, disabled, isLo
                         className={cn("w-full h-11 justify-between bg-muted/30", !value && "text-muted-foreground", (disabled || isLoading) && "opacity-50 cursor-not-allowed")}
                     >
                         <div className="flex items-center truncate">
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground"/>}
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />}
                             {value ? value : (isLoading ? "Fetching..." : placeholder)}
                         </div>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0 shadow-xl rounded-xl border-border/50">
+            <PopoverContent className="w-75 p-0 shadow-xl rounded-xl border-border/50">
                 <Command className="bg-transparent overflow-hidden rounded-xl filter-none">
-                    <CommandInput placeholder="Search..." className="h-11"/>
-                    <CommandList className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                    <CommandInput placeholder="Search..." className="h-11" />
+                    <CommandList className="max-h-62.5 overflow-y-auto custom-scrollbar">
                         <CommandEmpty>No results found.</CommandEmpty>
                         <CommandGroup>
                             {items.map((item, index) => (
@@ -193,7 +193,7 @@ function SearchableCombobox({items, value, onChange, placeholder, disabled, isLo
                                     }}
                                 >
                                     <Check
-                                        className={cn("mr-2 h-4 w-4 text-primary", value === item.name ? "opacity-100" : "opacity-0")}/>
+                                        className={cn("mr-2 h-4 w-4 text-primary", value === item.name ? "opacity-100" : "opacity-0")} />
                                     {item.name}
                                 </CommandItem>
                             ))}
@@ -208,6 +208,18 @@ function SearchableCombobox({items, value, onChange, placeholder, disabled, isLo
 // ============================================================================
 // SCHEMA & TYPES
 // ============================================================================
+
+
+const isWalkInClassification = (
+    classificationId: number | string | null | undefined,
+    options: ReferenceOption[],
+) => {
+    if (!classificationId) return false;
+    const match = options.find((o) => String(o.id) === String(classificationId));
+    const name = (match?.name || "").toLowerCase();
+    return name.includes("walk");
+};
+
 const customerSchema = z.object({
     customer_code: z.string().optional().or(z.literal("")),
     customer_name: z.string().min(1, "Customer name is required"),
@@ -215,9 +227,9 @@ const customerSchema = z.object({
     store_signage: z.string(),
     contact_number: z.string().min(1, "Contact number is required"),
     customer_email: z.string().email().or(z.literal("")),
-    brgy: z.string().min(1, "Barangay is required"),
-    city: z.string().min(1, "City is required"),
-    province: z.string().min(1, "Province is required"),
+    brgy: z.string().optional().or(z.literal("")),
+    city: z.string().optional().or(z.literal("")),
+    province: z.string().optional().or(z.literal("")),
     type: z.enum(["Regular", "Employee"]),
     user_id: z.coerce.number().nullable(),
     tel_number: z.string(),
@@ -231,6 +243,7 @@ const customerSchema = z.object({
     isActive: z.coerce.number().default(1),
     isVAT: z.coerce.number().default(0),
     isEWT: z.coerce.number().default(0),
+    status: z.enum(["Draft", "Active", "Suspended", "Archived"]).default("Draft"),
     customer_image: z.string().optional().nullable(),
     location: z.string().optional().nullable(),
     otherDetails: z.string().optional().nullable(),
@@ -251,6 +264,22 @@ const customerSchema = z.object({
 
 export type CustomerFormValues = z.infer<typeof customerSchema>;
 
+const PROFILE_STATUS_OPTIONS = [
+    { value: "Draft", label: "Draft", description: "Pending Verification" },
+    { value: "Active", label: "Active", description: "Fully Verified" },
+    { value: "Suspended", label: "Suspended", description: "Account on Hold" },
+    { value: "Archived", label: "Archived", description: "No longer active" }
+];
+
+const mapStatus = (s?: string | null) => {
+    if (!s) return "Draft";
+    const lower = s.toLowerCase();
+    if (lower.includes("active")) return "Active";
+    if (lower.includes("suspend")) return "Suspended";
+    if (lower.includes("archiv")) return "Archived";
+    return "Draft";
+};
+
 interface CustomerFormSheetProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -264,7 +293,7 @@ const getDefaultValues = (): CustomerFormValues => ({
     customer_email: "", brgy: "", city: "", province: "", tel_number: "", customer_tin: "",
     payment_term: 0, store_type: null, classification: null, price_type: "", isActive: 1, isVAT: 0, isEWT: 0,
     discount_type: null, type: "Regular", user_id: null, encoder_id: 1, bank_accounts: [],
-    customer_image: "", location: "", otherDetails: "",
+    customer_image: "", location: "", otherDetails: "", status: "Draft",
 });
 
 // ============================================================================
@@ -274,8 +303,8 @@ const renderMap = (locationString: string | null | undefined) => {
     if (!locationString) {
         return (
             <div
-                className="w-full h-[250px] bg-muted/30 rounded-xl border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground">
-                <MapPin className="h-8 w-8 mb-2 opacity-20"/>
+                className="w-full h-62.5 bg-muted/30 rounded-xl border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground">
+                <MapPin className="h-8 w-8 mb-2 opacity-20" />
                 <span className="text-xs font-bold uppercase tracking-widest">No Geo-Tag Available</span>
             </div>
         );
@@ -288,7 +317,7 @@ const renderMap = (locationString: string | null | undefined) => {
             <iframe
                 width="100%"
                 height="250"
-                style={{border: 0}}
+                style={{ border: 0 }}
                 loading="lazy"
                 allowFullScreen
                 referrerPolicy="no-referrer-when-downgrade"
@@ -297,15 +326,24 @@ const renderMap = (locationString: string | null | undefined) => {
             <div
                 className="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border shadow-sm flex items-center gap-1.5 pointer-events-none">
                 <span className="relative flex h-2 w-2">
-                  <span
-                      className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    <span
+                        className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 <span className="text-[9px] font-black uppercase tracking-widest text-foreground">Live Location</span>
             </div>
         </div>
     );
 };
+
+function TabBadge({ count }: { count: number }) {
+    if (count === 0) return null;
+    return (
+        <Badge variant="destructive" className="ml-2 h-4 w-4 p-0 flex items-center justify-center text-[10px] animate-in zoom-in">
+            {count}
+        </Badge>
+    );
+}
 
 // ============================================================================
 // MAIN COMPONENT
@@ -314,6 +352,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
     const [activeTab, setActiveTab] = useState(defaultTab);
     const [storeTypes, setStoreTypes] = useState<ReferenceOption[]>([]);
     const [classifications, setClassifications] = useState<ReferenceOption[]>([]);
+    const [statuses, setStatuses] = useState<ReferenceOption[]>([]);
     const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
     const [bankNames, setBankNames] = useState<ReferenceOption[]>([]);
 
@@ -337,8 +376,14 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
         defaultValues: getDefaultValues(),
     });
 
-    const selectedProvince = form.watch("province");
-    const selectedCity = form.watch("city");
+    const selectedProvince = useWatch({ control: form.control, name: "province" });
+    const selectedCity = useWatch({ control: form.control, name: "city" });
+    const selectedClassificationId = useWatch({ control: form.control, name: "classification" });
+    const watchedBankAccounts = useWatch({ control: form.control, name: "bank_accounts" });
+
+    const isWalkIn = useMemo(() => {
+        return isWalkInClassification(selectedClassificationId, classifications);
+    }, [selectedClassificationId, classifications]);
 
     // ========================================================================
     // 🚀 NEW FEATURE: AUTOMATIC IMAGE UPLOAD
@@ -431,7 +476,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                 if (!res.ok) throw new Error("Failed to fetch provinces");
                 const data = await res.json();
                 if (isMounted) {
-                    setProvincesList(data.map((p: { code: string; name: string }) => ({code: p.code, name: p.name})));
+                    setProvincesList(data.map((p: { code: string; name: string }) => ({ code: p.code, name: p.name })));
                 }
             } catch {
                 console.error("Failed to fetch provinces");
@@ -460,7 +505,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                 if (!res.ok) throw new Error("Failed to fetch cities");
                 const data = await res.json();
                 if (isMounted) {
-                    setCitiesList(data.map((c: { code: string; name: string }) => ({code: c.code, name: c.name})));
+                    setCitiesList(data.map((c: { code: string; name: string }) => ({ code: c.code, name: c.name })));
                 }
             } catch {
                 console.error("Failed to fetch provinces");
@@ -489,7 +534,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                 if (!res.ok) throw new Error("Failed to fetch barangays");
                 const data = await res.json();
                 if (isMounted) {
-                    setBarangaysList(data.map((b: { code: string; name: string }) => ({code: b.code, name: b.name})));
+                    setBarangaysList(data.map((b: { code: string; name: string }) => ({ code: b.code, name: b.name })));
                 }
             } catch {
                 console.error("Failed to fetch provinces");
@@ -502,8 +547,10 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
     }, [selectedCity, citiesList]);
 
     useEffect(() => {
-        if (open) setActiveTab(defaultTab);
-    }, [open, defaultTab]);
+        if (isWalkIn) {
+            form.clearErrors(["customer_tin", "province", "city", "brgy"]);
+        }
+    }, [form, isWalkIn]);
 
     useEffect(() => {
         let isMounted = true;
@@ -536,7 +583,13 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
             }
         };
 
-        if (open) fetchRefs();
+        if (open) {
+            setStatuses(PROFILE_STATUS_OPTIONS.map(opt => ({
+                id: opt.value,
+                name: opt.label
+            })));
+            fetchRefs();
+        }
 
         return () => { isMounted = false; };
     }, [open]);
@@ -610,6 +663,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                     isActive: customer.isActive ?? 1,
                     isVAT: customer.isVAT ?? 0,
                     isEWT: customer.isEWT ?? 0,
+                    status: mapStatus((customer as any).status || customer.profile_status),
                     discount_type: customer.discount_type || null,
                     type: customer.type || "Regular",
                     user_id: customer.user_id || null,
@@ -627,6 +681,56 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
     }, [customer, form, open]);
 
     const handleFormSubmit: SubmitHandler<CustomerFormValues> = async (values) => {
+        const walkInSelected = isWalkInClassification(values.classification, classifications);
+        form.clearErrors(["customer_tin", "province", "city", "brgy"]);
+
+        let hasManualErrors = false;
+        let firstTab: "address" | "billing" | null = null;
+
+        if (!walkInSelected) {
+            if (!values.province || values.province.trim() === "") {
+                form.setError("province", {
+                    type: "manual",
+                    message: "Province is required unless classification is Walk-in.",
+                });
+                firstTab = firstTab || "address";
+                hasManualErrors = true;
+            }
+
+            if (!values.city || values.city.trim() === "") {
+                form.setError("city", {
+                    type: "manual",
+                    message: "City is required unless classification is Walk-in.",
+                });
+                firstTab = firstTab || "address";
+                hasManualErrors = true;
+            }
+
+            if (!values.brgy || values.brgy.trim() === "") {
+                form.setError("brgy", {
+                    type: "manual",
+                    message: "Barangay is required unless classification is Walk-in.",
+                });
+                firstTab = firstTab || "address";
+                hasManualErrors = true;
+            }
+
+            if (!values.customer_tin || values.customer_tin.trim() === "") {
+                form.setError("customer_tin", {
+                    type: "manual",
+                    message: "TIN is required unless classification is Walk-in.",
+                });
+                firstTab = firstTab || "billing";
+                hasManualErrors = true;
+            }
+        }
+
+        if (hasManualErrors) {
+            if (firstTab) setActiveTab(firstTab);
+            toast.error("Please complete the required fields before saving.");
+            return;
+        }
+
         try {
             await onSubmit(values);
             onOpenChange(false);
@@ -635,65 +739,65 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
         }
     };
 
-    // Helper to count errors per tab
-    const getTabErrorCount = (tab: string) => {
+    const tabErrorCounts = useMemo(() => {
         const errorKeys = Object.keys(form.formState.errors);
-        if (errorKeys.length === 0) return 0;
-
-        switch (tab) {
-            case "basic":
-                return errorKeys.filter(k =>
-                    ["customer_code", "customer_name", "store_type", "classification", "store_name", "store_signage"].includes(k)
-                ).length;
-            case "address":
-                return errorKeys.filter(k =>
-                    ["province", "city", "brgy", "contact_number", "tel_number", "customer_email"].includes(k)
-                ).length;
-            case "billing":
-                return errorKeys.filter(k =>
-                    ["payment_term", "price_type", "isActive", "isVAT", "isEWT"].includes(k)
-                ).length;
-            case "bank":
-                return form.formState.errors.bank_accounts ? 1 : 0;
-            default:
-                return 0;
+        if (errorKeys.length === 0) {
+            return { basic: 0, address: 0, billing: 0, bank: 0 };
         }
-    };
 
-    const TabBadge = ({ count }: { count: number }) => {
-        if (count === 0) return null;
-        return (
-            <Badge variant="destructive" className="ml-2 h-4 w-4 p-0 flex items-center justify-center text-[10px] animate-in zoom-in">
-                {count}
-            </Badge>
-        );
-    };
+        return {
+            basic: errorKeys.filter(k =>
+                ["customer_code", "customer_name", "store_type", "classification", "status", "store_name", "store_signage"].includes(k)
+            ).length,
+            address: errorKeys.filter(k =>
+                ["province", "city", "brgy", "contact_number", "tel_number", "customer_email"].includes(k)
+            ).length,
+            billing: errorKeys.filter(k =>
+                ["customer_tin", "payment_term", "price_type", "isActive", "isVAT", "isEWT"].includes(k)
+            ).length,
+            bank: form.formState.errors.bank_accounts ? 1 : 0,
+        };
+    }, [form.formState.errors]);
 
     const navigateToFirstError = () => {
-        if (getTabErrorCount("basic") > 0) setActiveTab("basic");
-        else if (getTabErrorCount("address") > 0) setActiveTab("address");
-        else if (getTabErrorCount("billing") > 0) setActiveTab("billing");
+        if (tabErrorCounts.basic > 0) setActiveTab("basic");
+        else if (tabErrorCounts.address > 0) setActiveTab("address");
+        else if (tabErrorCounts.billing > 0) setActiveTab("billing");
     };
 
-    const hasExternalErrors = getTabErrorCount("basic") > 0 || getTabErrorCount("address") > 0 || getTabErrorCount("billing") > 0;
+    const hasExternalErrors = tabErrorCounts.basic > 0 || tabErrorCounts.address > 0 || tabErrorCounts.billing > 0;
 
     const onFormError = () => {
         toast.error("Please fill in all required fields in the highlighted tabs.");
     };
 
+    const handleSheetOpenChange = (nextOpen: boolean) => {
+        if (!nextOpen) {
+            setActiveTab(defaultTab);
+        }
+        onOpenChange(nextOpen);
+    };
+
     // [handleCreateStoreType & handleCreateClassification omitted for brevity, they remain unchanged]
+    const handleCreateStatus = async (name: string) => {
+        // Profile status is a string enum/text field, so we just apply it locally
+        setStatuses(prev => [...prev, { id: name, name }]);
+        form.setValue("status", name as any, { shouldValidate: true });
+        toast.success(`Custom status "${name}" applied.`);
+    };
+
     const handleCreateStoreType = async (name: string) => {
         try {
             const res = await fetch("/api/crm/customer/references", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({type: "store_type", name})
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "store_type", name })
             });
             if (!res.ok) throw new Error("Failed to create store type");
             const json = await res.json();
             const newId = json.data.id;
-            setStoreTypes(prev => [...prev, {id: newId, name}]);
-            form.setValue("store_type", newId, {shouldValidate: true});
+            setStoreTypes(prev => [...prev, { id: newId, name }]);
+            form.setValue("store_type", newId, { shouldValidate: true });
             toast.success(`Store Type "${name}" created successfully!`);
         } catch {
             toast.error("Failed to create store type.");
@@ -704,14 +808,14 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
         try {
             const res = await fetch("/api/crm/customer/references", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({type: "classification", name})
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "classification", name })
             });
             if (!res.ok) throw new Error("Failed to create classification");
             const json = await res.json();
             const newId = json.data.id;
-            setClassifications(prev => [...prev, {id: newId, name}]);
-            form.setValue("classification", newId, {shouldValidate: true});
+            setClassifications(prev => [...prev, { id: newId, name }]);
+            form.setValue("classification", newId, { shouldValidate: true });
             toast.success(`Classification "${name}" created successfully!`);
         } catch {
             toast.error("Failed to create classification.");
@@ -719,7 +823,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
     };
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet open={open} onOpenChange={handleSheetOpenChange}>
             <SheetContent
                 className="w-full sm:max-w-2xl md:max-w-3xl p-0 flex flex-col bg-background shadow-2xl border-l-border/40">
 
@@ -727,7 +831,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                     <SheetHeader className="text-left">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-primary/10 rounded-2xl text-primary shadow-inner hidden sm:flex">
-                                <Users className="h-6 w-6"/>
+                                <Users className="h-6 w-6" />
                             </div>
                             <div>
                                 <SheetTitle
@@ -744,7 +848,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleFormSubmit, onFormError)}
-                          className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                        className="flex flex-col flex-1 min-h-0 overflow-hidden">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
 
                             <div className="px-6 md:px-8 pt-4 shrink-0 bg-background z-10 space-y-4">
@@ -756,10 +860,10 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                             <span className="text-xs font-bold leading-relaxed">
                                                 This customer has missing required information in other sections. Please complete them to save changes.
                                             </span>
-                                            <Button 
-                                                type="button" 
-                                                variant="destructive" 
-                                                size="sm" 
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="sm"
                                                 onClick={navigateToFirstError}
                                                 className="h-8 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg shrink-0"
                                             >
@@ -771,31 +875,31 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
 
                                 <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-muted/50 rounded-xl">
                                     <TabsTrigger value="basic"
-                                                 disabled={defaultTab === "bank" && getTabErrorCount("basic") === 0}
-                                                 className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
+                                        disabled={defaultTab === "bank" && tabErrorCounts.basic === 0}
+                                        className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
                                         <Building2 className="w-3.5 h-3.5 mr-2 hidden md:block" />
                                         Basic
-                                        <TabBadge count={getTabErrorCount("basic")} />
+                                        <TabBadge count={tabErrorCounts.basic} />
                                     </TabsTrigger>
                                     <TabsTrigger value="address"
-                                                 disabled={defaultTab === "bank" && getTabErrorCount("address") === 0}
-                                                 className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
+                                        disabled={defaultTab === "bank" && tabErrorCounts.address === 0}
+                                        className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
                                         <MapPin className="w-3.5 h-3.5 mr-2 hidden md:block" />
                                         Location
-                                        <TabBadge count={getTabErrorCount("address")} />
+                                        <TabBadge count={tabErrorCounts.address} />
                                     </TabsTrigger>
                                     <TabsTrigger value="billing"
-                                                 disabled={defaultTab === "bank" && getTabErrorCount("billing") === 0}
-                                                 className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
+                                        disabled={defaultTab === "bank" && tabErrorCounts.billing === 0}
+                                        className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
                                         <Receipt className="w-3.5 h-3.5 mr-2 hidden md:block" />
                                         Billing
-                                        <TabBadge count={getTabErrorCount("billing")} />
+                                        <TabBadge count={tabErrorCounts.billing} />
                                     </TabsTrigger>
                                     <TabsTrigger value="bank"
-                                                 className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
+                                        className="py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg flex items-center justify-center">
                                         <CreditCard className="w-3.5 h-3.5 mr-2 hidden md:block" />
                                         Bank
-                                        <TabBadge count={getTabErrorCount("bank")} />
+                                        <TabBadge count={tabErrorCounts.bank} />
                                     </TabsTrigger>
                                 </TabsList>
                             </div>
@@ -803,9 +907,9 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                             <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
 
                                 <TabsContent value="basic"
-                                             className="space-y-6 m-0 animate-in fade-in slide-in-from-bottom-2">
+                                    className="space-y-6 m-0 animate-in fade-in slide-in-from-bottom-2">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormField control={form.control} name="customer_code" render={({field}) => (
+                                        <FormField control={form.control} name="customer_code" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel
                                                     className="font-bold uppercase text-xs text-muted-foreground">
@@ -820,52 +924,82 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                         value={field.value || "AUTO-GENERATED"}
                                                     />
                                                 </FormControl>
-                                                <FormMessage/>
+                                                <FormMessage />
                                             </FormItem>
-                                        )}/>
+                                        )} />
                                         <FormField control={form.control} name="customer_name"
-                                                   render={({field}) => (
-                                                       <FormItem><FormLabel
-                                                           className="font-bold uppercase text-xs text-muted-foreground">Customer
-                                                           Name</FormLabel><FormControl><Input
-                                                           className="h-11 bg-muted/30"
-                                                           placeholder="John Doe" {...field} /></FormControl><FormMessage/></FormItem>
-                                                   )}/>
+                                            render={({ field }) => (
+                                                <FormItem><FormLabel
+                                                    className="font-bold uppercase text-xs text-muted-foreground">Customer
+                                                    Name</FormLabel><FormControl><Input
+                                                        className="h-11 bg-muted/30"
+                                                        placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>
+                                            )} />
 
-                                        <FormField control={form.control} name="store_type" render={({field}) => (
-                                            <FormItem className="flex flex-col pt-1.5"><FormLabel
-                                                className="font-bold uppercase text-xs text-muted-foreground">Store
-                                                Type</FormLabel><CreatableCombobox items={storeTypes}
-                                                                                   value={field.value}
-                                                                                   onChange={field.onChange}
-                                                                                   onCreate={handleCreateStoreType}
-                                                                                   placeholder="Select or create..."
-                                                                                   itemName="Store Type"/><FormMessage/></FormItem>
-                                        )}/>
+                                        <FormField control={form.control} name="store_type" render={({ field }) => (
+                                            <FormItem className="flex flex-col pt-1.5">
+                                                <FormLabel
+                                                    className="font-bold uppercase text-xs text-muted-foreground">
+                                                    Store Type
+                                                </FormLabel>
+                                                <CreatableCombobox
+                                                    items={storeTypes}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    onCreate={handleCreateStoreType}
+                                                    placeholder="Select or create..."
+                                                    itemName="Store Type" />
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
 
-                                        <FormField control={form.control} name="classification" render={({field}) => (
-                                            <FormItem className="flex flex-col pt-1.5"><FormLabel
-                                                className="font-bold uppercase text-xs text-muted-foreground">Classification</FormLabel><CreatableCombobox
-                                                items={classifications} value={field.value} onChange={field.onChange}
-                                                onCreate={handleCreateClassification} placeholder="Select or create..."
-                                                itemName="Classification"/><FormMessage/></FormItem>
-                                        )}/>
+                                        <FormField control={form.control} name="classification" render={({ field }) => (
+                                            <FormItem className="flex flex-col pt-1.5">
+                                                <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
+                                                    Classification
+                                                </FormLabel>
+                                                <CreatableCombobox
+                                                    items={classifications}
+                                                    value={field.value} onChange={field.onChange}
+                                                    onCreate={handleCreateClassification} placeholder="Select or create..."
+                                                    itemName="Classification" />
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
 
-                                        <FormField control={form.control} name="store_name" render={({field}) => (
+                                        <FormField control={form.control} name="status" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel
+                                                    className="font-bold uppercase text-xs text-muted-foreground">
+                                                    Profile Status
+                                                </FormLabel>
+                                                <CreatableCombobox
+                                                    items={statuses}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    onCreate={handleCreateStatus}
+                                                    placeholder="Select or create status..."
+                                                    itemName="Status"
+                                                />
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+
+                                        <FormField control={form.control} name="store_name" render={({ field }) => (
                                             <FormItem><FormLabel
                                                 className="font-bold uppercase text-xs text-muted-foreground">Store
                                                 Name</FormLabel><FormControl><Input className="h-11 bg-muted/30"
-                                                                                    placeholder="Main Branch" {...field} /></FormControl><FormMessage/></FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="store_signage" render={({field}) => (
+                                                    placeholder="Main Branch" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="store_signage" render={({ field }) => (
                                             <FormItem><FormLabel
                                                 className="font-bold uppercase text-xs text-muted-foreground">Store
                                                 Signage</FormLabel><FormControl><Input className="h-11 bg-muted/30"
-                                                                                       placeholder="Doe's General Store" {...field} /></FormControl><FormMessage/></FormItem>
-                                        )}/>
+                                                    placeholder="Doe's General Store" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
 
                                         {/* 🚀 FIXED: Interactive Image Upload & Preview */}
-                                        <FormField control={form.control} name="customer_image" render={({field}) => (
+                                        <FormField control={form.control} name="customer_image" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
                                                     Store / Customer Image (UUID or URL)
@@ -897,85 +1031,90 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                         onChange={handleImageUpload}
                                                     />
                                                 </div>
-                                                <FormMessage/>
+                                                <FormMessage />
                                                 {renderImagePreview(field.value)}
                                             </FormItem>
-                                        )}/>
+                                        )} />
 
-                                        <FormField control={form.control} name="otherDetails" render={({field}) => (
+                                        <FormField control={form.control} name="otherDetails" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel
                                                     className="font-bold uppercase text-xs text-muted-foreground">Remarks</FormLabel>
-                                                <FormControl><Textarea className="bg-muted/30 min-h-[100px] resize-none"
-                                                                       placeholder="Additional customer remarks..." {...field}
-                                                                       value={field.value || ""}/></FormControl>
-                                                <FormMessage/>
+                                                <FormControl><Textarea className="bg-muted/30 min-h-25 resize-none"
+                                                    placeholder="Additional customer remarks..." {...field}
+                                                    value={field.value || ""} /></FormControl>
+                                                <FormMessage />
                                             </FormItem>
-                                        )}/>
+                                        )} />
                                     </div>
                                 </TabsContent>
 
                                 <TabsContent value="address"
-                                             className="space-y-6 m-0 animate-in fade-in slide-in-from-bottom-2">
+                                    className="space-y-6 m-0 animate-in fade-in slide-in-from-bottom-2">
+                                    {isWalkIn && (
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-700 font-semibold">
+                                            Walk-in classification: Delivery address fields can be left blank.
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormField control={form.control} name="province" render={({field}) => (
+                                        <FormField control={form.control} name="province" render={({ field }) => (
                                             <FormItem className="flex flex-col md:col-span-2">
                                                 <FormLabel
                                                     className="font-bold uppercase text-xs text-muted-foreground">Province</FormLabel>
                                                 <SearchableCombobox
                                                     items={provincesList}
-                                                    value={field.value}
+                                                    value={field.value || ""}
                                                     isLoading={isLoadingProvinces}
                                                     onChange={(val: string) => {
                                                         field.onChange(val);
-                                                        form.setValue("city", "", {shouldValidate: true});
-                                                        form.setValue("brgy", "", {shouldValidate: true});
+                                                        form.setValue("city", "", { shouldValidate: true });
+                                                        form.setValue("brgy", "", { shouldValidate: true });
                                                     }}
                                                     placeholder="Search province..."
                                                     disabled={isLoadingProvinces}
                                                 />
-                                                <FormMessage/>
+                                                <FormMessage />
                                             </FormItem>
-                                        )}/>
+                                        )} />
 
-                                        <FormField control={form.control} name="city" render={({field}) => (
+                                        <FormField control={form.control} name="city" render={({ field }) => (
                                             <FormItem className="flex flex-col">
                                                 <FormLabel
                                                     className="font-bold uppercase text-xs text-muted-foreground">City /
                                                     Municipality</FormLabel>
                                                 <SearchableCombobox
                                                     items={citiesList}
-                                                    value={field.value}
+                                                    value={field.value || ""}
                                                     isLoading={isLoadingCities}
                                                     onChange={(val: string) => {
                                                         field.onChange(val);
-                                                        form.setValue("brgy", "", {shouldValidate: true});
+                                                        form.setValue("brgy", "", { shouldValidate: true });
                                                     }}
                                                     placeholder={selectedProvince ? "Search city..." : "Select province first"}
                                                     disabled={!selectedProvince || isLoadingCities}
                                                 />
-                                                <FormMessage/>
+                                                <FormMessage />
                                             </FormItem>
-                                        )}/>
+                                        )} />
 
-                                        <FormField control={form.control} name="brgy" render={({field}) => (
+                                        <FormField control={form.control} name="brgy" render={({ field }) => (
                                             <FormItem className="flex flex-col">
                                                 <FormLabel
                                                     className="font-bold uppercase text-xs text-muted-foreground">Barangay</FormLabel>
                                                 <SearchableCombobox
                                                     items={barangaysList}
-                                                    value={field.value}
+                                                    value={field.value || ""}
                                                     isLoading={isLoadingBarangays}
                                                     onChange={field.onChange}
                                                     placeholder={selectedCity ? "Search barangay..." : "Select city first"}
                                                     disabled={!selectedCity || isLoadingBarangays}
                                                 />
-                                                <FormMessage/>
+                                                <FormMessage />
                                             </FormItem>
-                                        )}/>
+                                        )} />
 
                                         {/* 🚀 FIXED: Auto-Fill Address Button Added */}
-                                        <FormField control={form.control} name="location" render={({field}) => (
+                                        <FormField control={form.control} name="location" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
                                                     Geo Tag (Coordinates)
@@ -1000,112 +1139,216 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                         Auto-Fill Address
                                                     </Button>
                                                 </div>
-                                                <FormMessage/>
+                                                <FormMessage />
 
                                                 <div className="mt-4">
                                                     {renderMap(field.value)}
                                                 </div>
                                             </FormItem>
-                                        )}/>
+                                        )} />
 
-                                        <FormField control={form.control} name="contact_number" render={({field}) => (
+                                        <FormField control={form.control} name="contact_number" render={({ field }) => (
                                             <FormItem><FormLabel
                                                 className="font-bold uppercase text-xs text-muted-foreground">Mobile
                                                 Number</FormLabel><FormControl><Input className="h-11 bg-muted/30"
-                                                                                      placeholder="09123456789" {...field} /></FormControl><FormMessage/></FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="tel_number" render={({field}) => (
+                                                    placeholder="09123456789" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="tel_number" render={({ field }) => (
                                             <FormItem><FormLabel
                                                 className="font-bold uppercase text-xs text-muted-foreground">Telephone
                                                 Number</FormLabel><FormControl><Input
-                                                className="h-11 bg-muted/30" {...field} /></FormControl><FormMessage/></FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="customer_email" render={({field}) => (
+                                                    className="h-11 bg-muted/30" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="customer_email" render={({ field }) => (
                                             <FormItem className="md:col-span-2"><FormLabel
                                                 className="font-bold uppercase text-xs text-muted-foreground">Email
                                                 Address</FormLabel><FormControl><Input className="h-11 bg-muted/30"
-                                                                                       type="email"
-                                                                                       placeholder="customer@example.com" {...field} /></FormControl><FormMessage/></FormItem>
-                                        )}/>
+                                                    type="email"
+                                                    placeholder="customer@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
                                     </div>
                                 </TabsContent>
 
                                 <TabsContent value="billing"
-                                             className="space-y-6 m-0 animate-in fade-in slide-in-from-bottom-2">
+                                    className="space-y-6 m-0 animate-in fade-in slide-in-from-bottom-2">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormField control={form.control} name="payment_term" render={({field}) => (
-                                            <FormItem>
-                                                <FormLabel
-                                                    className="font-bold uppercase text-xs text-muted-foreground">
-                                                    Payment Term
-                                                </FormLabel>
-                                                <Select
-                                                    disabled={isLoadingPaymentTerms}
-                                                    onValueChange={(val) => field.onChange(Number(val))}
-                                                    value={field.value ? String(field.value) : ""}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger className="h-11 bg-muted/30">
-                                                            <SelectValue
-                                                                placeholder={isLoadingPaymentTerms ? "Loading terms..." : "Select payment term"}/>
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {paymentTerms.map((term) => (
-                                                            <SelectItem key={term.id} value={String(term.id)}>
-                                                                {term.payment_name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage/>
-                                            </FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="price_type" render={({field}) => (
-                                            <FormItem><FormLabel
-                                                className="font-bold uppercase text-xs text-muted-foreground">Price
-                                                Type</FormLabel><FormControl><Input className="h-11 bg-muted/30"
-                                                                                    placeholder="Retail/Wholesale" {...field} /></FormControl><FormMessage/></FormItem>
-                                        )}/>
-                                    </div>
 
+                                        {/* PAYMENT TERM */}
+                                        <FormField
+                                            control={form.control}
+                                            name="payment_term"
+                                            rules={{ required: "Payment term is required" }}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
+                                                        Payment Term
+                                                    </FormLabel>
+
+                                                    <Select
+                                                        disabled={isLoadingPaymentTerms}
+                                                        onValueChange={(val) => field.onChange(Number(val))}
+                                                        value={field.value ? String(field.value) : ""}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger className="h-11 bg-muted/30">
+                                                                <SelectValue
+                                                                    placeholder={
+                                                                        isLoadingPaymentTerms
+                                                                            ? "Loading terms..."
+                                                                            : "Select payment term"
+                                                                    }
+                                                                />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+
+                                                        <SelectContent>
+                                                            {paymentTerms.map((term) => (
+                                                                <SelectItem key={term.id} value={String(term.id)}>
+                                                                    {term.payment_name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        {/* PRICE TYPE (CONTROLLED) */}
+                                        <FormField
+                                            control={form.control}
+                                            name="price_type"
+                                            rules={{ required: "Price type is required" }}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
+                                                        Price Type
+                                                    </FormLabel>
+
+                                                    <Select
+                                                        onValueChange={field.onChange}
+                                                        value={field.value || ""}
+                                                        // disabled={isWalkIn} // optional rule
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger className="h-11 bg-muted/30">
+                                                                <SelectValue placeholder="Select price type" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+
+                                                        <SelectContent>
+                                                            <SelectItem value="A">Price Type A</SelectItem>
+                                                            <SelectItem value="B">Price Type B</SelectItem>
+                                                            <SelectItem value="Retail">Retail</SelectItem>
+                                                            <SelectItem value="Wholesale">Wholesale</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    {/* {isWalkIn && (
+                                                        <p className="text-[11px] text-amber-600 mt-1 font-semibold">
+                                                            Walk-in customers typically do not require a pricing tier.
+                                                        </p>
+                                                    )} */}
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+
+
+                                    </div>
+                                    <div>
+                                        {/* CUSTOMER TIN */}
+                                        <FormField
+                                            control={form.control}
+                                            name="customer_tin"
+                                            rules={{
+                                                validate: (value) => {
+                                                    if (!isWalkIn && !value) {
+                                                        return "TIN is required for non walk-in customers";
+                                                    }
+                                                    return true;
+                                                },
+                                            }}
+                                            render={({ field }) => (
+                                                <FormItem className="md:col-span-2">
+                                                    <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
+                                                        Business Registration No. (TIN)
+                                                    </FormLabel>
+
+                                                    <FormControl>
+                                                        <Input
+                                                            className="h-11 bg-muted/30 font-mono"
+                                                            placeholder="000-000-000-00000"
+                                                            value={field.value || ""}
+                                                            onChange={(e) => {
+                                                                const raw = e.target.value.replace(/\D/g, "").slice(0, 14);
+
+                                                                const formatted = raw
+                                                                    .replace(/^(\d{3})(\d{3})(\d{3})(\d{0,5}).*/, (_, a, b, c, d) =>
+                                                                        [a, b, c, d].filter(Boolean).join("-")
+                                                                    );
+
+                                                                field.onChange(formatted);
+                                                            }}
+                                                        />
+                                                    </FormControl>
+
+                                                    {/* Dynamic Guidance */}
+                                                    {!isWalkIn ? (
+                                                        <p className="text-[11px] text-muted-foreground mt-1">
+                                                            Required for all registered business customers. Must be unique.
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-[11px] text-amber-600 mt-1 font-semibold">
+                                                            Walk-in classification: TIN is optional.
+                                                        </p>
+                                                    )}
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
                                     <div
                                         className="bg-muted/20 p-5 rounded-2xl border border-border/50 flex flex-col sm:flex-row gap-8 mt-6">
-                                        <FormField control={form.control} name="isActive" render={({field}) => (
+                                        <FormField control={form.control} name="isActive" render={({ field }) => (
                                             <FormItem
                                                 className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox
-                                                checked={field.value === 1}
-                                                onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
-                                                className="w-5 h-5 rounded-md"/></FormControl><FormLabel
-                                                className="font-bold uppercase text-xs cursor-pointer">Active
-                                                Account</FormLabel></FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="isVAT" render={({field}) => (
+                                                    checked={field.value === 1}
+                                                    onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                                                    className="w-5 h-5 rounded-md" /></FormControl><FormLabel
+                                                        className="font-bold uppercase text-xs cursor-pointer">Active
+                                                    Account</FormLabel></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="isVAT" render={({ field }) => (
                                             <FormItem
                                                 className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox
-                                                checked={field.value === 1}
-                                                onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
-                                                className="w-5 h-5 rounded-md"/></FormControl><FormLabel
-                                                className="font-bold uppercase text-xs cursor-pointer">VAT
-                                                Registered</FormLabel></FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="isEWT" render={({field}) => (
+                                                    checked={field.value === 1}
+                                                    onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                                                    className="w-5 h-5 rounded-md" /></FormControl><FormLabel
+                                                        className="font-bold uppercase text-xs cursor-pointer">VAT
+                                                    Registered</FormLabel></FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="isEWT" render={({ field }) => (
                                             <FormItem
                                                 className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox
-                                                checked={field.value === 1}
-                                                onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
-                                                className="w-5 h-5 rounded-md"/></FormControl><FormLabel
-                                                className="font-bold uppercase text-xs cursor-pointer">Subject to
-                                                EWT</FormLabel></FormItem>
-                                        )}/>
+                                                    checked={field.value === 1}
+                                                    onCheckedChange={(checked) => field.onChange(checked ? 1 : 0)}
+                                                    className="w-5 h-5 rounded-md" /></FormControl><FormLabel
+                                                        className="font-bold uppercase text-xs cursor-pointer">Subject to
+                                                    EWT</FormLabel></FormItem>
+                                        )} />
                                     </div>
                                 </TabsContent>
 
                                 <TabsContent value="bank" className="m-0 animate-in fade-in slide-in-from-bottom-2">
                                     <BankAccountManager
-                                        accounts={form.watch("bank_accounts") || []}
+                                        accounts={watchedBankAccounts || []}
                                         banks={bankNames}
-                                        onAccountsChange={(accounts) => form.setValue("bank_accounts", accounts, {shouldDirty: true})}
+                                        onAccountsChange={(accounts) => form.setValue("bank_accounts", accounts, { shouldDirty: true })}
                                         isLoading={isLoadingBankNames}
                                     />
                                 </TabsContent>
@@ -1115,12 +1358,12 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                         <div
                             className="p-4 md:p-6 border-t border-border/50 bg-card/95 backdrop-blur-md shrink-0 flex items-center justify-end gap-3 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
                             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}
-                                    className="h-12 px-6 font-bold uppercase tracking-widest text-xs rounded-xl hover:bg-muted">
+                                className="h-12 px-6 font-bold uppercase tracking-widest text-xs rounded-xl hover:bg-muted">
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={form.formState.isSubmitting}
-                                    className="h-12 px-8 font-black uppercase tracking-widest text-xs rounded-xl shadow-lg transition-all active:scale-95 bg-primary hover:bg-primary/90 text-primary-foreground">
-                                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                className="h-12 px-8 font-black uppercase tracking-widest text-xs rounded-xl shadow-lg transition-all active:scale-95 bg-primary hover:bg-primary/90 text-primary-foreground">
+                                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 {customer ? "Save Changes" : "Create Customer"}
                             </Button>
                         </div>
