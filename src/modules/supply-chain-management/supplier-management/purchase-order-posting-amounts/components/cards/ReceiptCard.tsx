@@ -31,9 +31,6 @@ export function ReceiptCard({ receipt }: { receipt: PostingReceipt }) {
         poStatus === "RECEIVED" ||
         poStatus === "PARTIAL" ||
         poStatus === "PARTIAL_POSTED";
-
-    const canRevert = !!selectedPO.id && !isPosted;
-
     const disabledReason = !poReady
         ? "PO is not ready. Complete receiving first."
         : isPosted
@@ -63,23 +60,36 @@ export function ReceiptCard({ receipt }: { receipt: PostingReceipt }) {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant={isPosted ? "outline" : "secondary"}>
-                        {isPosted ? "POSTED" : "UNPOSTED"}
+                    <Badge variant={(isPosted || poStatus === "CLOSED") ? "outline" : "secondary"}>
+                        {(isPosted || poStatus === "CLOSED") ? "POSTED" : "FOR POSTING"}
                     </Badge>
 
-                    {canRevert && (
+                    {/* Post Amount Button: Only if Inventory is Posted and PO is not CLOSED */}
+                    {isPosted && poStatus !== "CLOSED" && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            disabled={posting || reverting}
+                            onClick={() => setOpen(true)}
+                            className="h-7 text-[10px] font-black uppercase rounded-md shadow-sm"
+                        >
+                            {posting ? "Posting..." : "Post Amount"}
+                        </Button>
+                    )}
+
+                    {/* Revert Button: Only if Inventory is Posted and PO is not CLOSED */}
+                    {isPosted && poStatus !== "CLOSED" && (
                         <Button
                             type="button"
                             size="sm"
                             variant="outline"
                             disabled={reverting || posting}
                             onClick={() => setRevertOpen(true)}
-                            className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950"
+                            className="h-7 text-[10px] font-black uppercase rounded-md shadow-sm text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700 dark:text-orange-400 dark:border-orange-900/50 dark:hover:bg-orange-950/50"
                         >
                             {reverting ? "Reverting..." : "Revert"}
                         </Button>
                     )}
-
                 </div>
             </div>
 

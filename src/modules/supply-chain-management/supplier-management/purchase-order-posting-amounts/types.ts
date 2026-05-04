@@ -23,6 +23,10 @@ export type POListItem = {
     // posting-specific
     receiptsCount: number;
     unpostedReceiptsCount: number;
+    postedInventory: number;
+    unpostedInventory: number;
+    postedAmount: number;
+    unpostedAmount: number;
 };
 
 export type Supplier = { id: string; name: string };
@@ -73,6 +77,10 @@ export type PurchaseOrder = {
     // posting-specific counts
     receiptsCount: number;
     unpostedReceiptsCount: number;
+    postedInventory?: number;
+    unpostedInventory?: number;
+    postedAmount?: number;
+    unpostedAmount?: number;
     postingReady?: boolean;
 
     grossAmount?: number;

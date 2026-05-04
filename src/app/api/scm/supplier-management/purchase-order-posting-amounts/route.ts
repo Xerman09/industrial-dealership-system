@@ -589,7 +589,22 @@ function buildReceiptSummary(porRows: PORRow[], priceMap?: Map<number, number>, 
     // ✅ In Post Amounts, a receipt is "ready for amount posting" if it HAS been inventory-posted (isPosted === 1)
     const unpostedReceiptsCount = receipts.filter((r) => toNum(r.isPosted) === 1).length;
 
-    return { receipts, receiptsCount, unpostedReceiptsCount };
+    let postedQty = 0;
+    let unpostedQty = 0;
+    let postedAmt = 0;
+    let unpostedAmt = 0;
+
+    for (const r of receipts) {
+        if (toNum(r.isPosted) === 1) {
+            postedQty += r.totalReceivedQty;
+            postedAmt += r.totalAmount;
+        } else {
+            unpostedQty += r.totalReceivedQty;
+            unpostedAmt += r.totalAmount;
+        }
+    }
+
+    return { receipts, receiptsCount, unpostedReceiptsCount, postedQty, unpostedQty, postedAmt, unpostedAmt };
 }
 
 function receivingStatusFrom(porRows: PORRow[], opts?: { isClosed?: boolean; fullyReceived?: boolean; hasAnyPosted?: boolean }) {
@@ -706,6 +721,10 @@ type PostingListItem = {
     branchesCount: number;
     receiptsCount: number;
     unpostedReceiptsCount: number;
+    postedInventory: number;
+    unpostedInventory: number;
+    postedAmount: number;
+    unpostedAmount: number;
     postingReady: boolean;
     latestReceiptNo?: string;
     latestReceiptDate?: string;
@@ -751,6 +770,10 @@ type PostingPODetail = {
     postingReady: boolean;
     latestReceiptNo?: string;
     latestReceiptDate?: string;
+    postedInventory: number;
+    unpostedInventory: number;
+    postedAmount: number;
+    unpostedAmount: number;
     grossAmount: number;
     discountAmount: number;
     vatAmount: number;
@@ -835,8 +858,7 @@ export async function GET() {
             const poId = toNum(po?.purchase_order_id);
             if (!poId) continue;
 
-            // ✅ Double-check: Skip if is_posted is already true (belt-and-suspenders)
-            if (toNum(po?.is_posted) === 1 || po?.is_posted === true) continue;
+            // We allow is_posted POs in the list (sorted to the bottom) as per user request
 
             const porRows = porByPo.get(poId) ?? [];
             const lines = linesByPo.get(poId) ?? [];
@@ -845,10 +867,15 @@ export async function GET() {
 
             // hasAnyPosted: true when at least one POR row is already posted
             // This is the key signal for PARTIAL_POSTED status
-            const hasAnyPosted = porRows.some((r) => toNum(r?.isPosted) === 1);
+            const totalAnyPosted = porRows.some((r) => toNum(r?.isPosted) === 1);
+            const isHeaderPostedCheck = toNum(po?.is_posted) === 1;
 
-            const sid = toNum(po?.supplier_name);
-            const supplierName = sid ? toStr(supplierNamesMap.get(sid), "—") : "—";
+            // Only show POs where inventory has already been posted (isPosted=1 on at least one receipt)
+            // OR where the PO itself is already financially closed (is_posted=1 on header)
+            if (!totalAnyPosted && !isHeaderPostedCheck) continue;
+
+            const poSupplierId = toNum(po?.supplier_name);
+            const supplierName = poSupplierId ? toStr(supplierNamesMap.get(poSupplierId), "—") : "—";
 
             const poNumber = toStr(po?.purchase_order_no, String(poId));
 
@@ -878,43 +905,59 @@ export async function GET() {
             }
             if (!hasSerializedItem) continue;
 
+            const psl = poSupplierId ? await fetchProductSupplierLinks(base, poSupplierId) : new Map();
+            const poDType = po?.discount_type as Record<string, unknown> | null | undefined;
+            const poDiscPct = resolveDiscountPercent(poDType);
+
+            const porPriceMap = new Map<number, number>();
+            const porDiscMap = new Map<number, number>();
+
+            for (const r of porRows) {
+                const porId = toNum(r.purchase_order_product_id);
+                const pid = toNum(r.product_id);
+                const bid = toNum(r.branch_id);
+                const matchLine = lines.find(l => toNum(l.product_id) === pid && toNum(l.branch_id) === bid);
+                const p = productsMap.get(pid);
+
+                const unitPrice = Number(toNum(p?.cost_per_unit) || toNum(matchLine?.unit_price) || toNum(r.unit_price) || 0);
+                const link = psl.get(pid);
+                const discPct = link ? resolveDiscountPercent(link.discount_type) : poDiscPct;
+                const discAmt = Number((unitPrice * (discPct / 100)).toFixed(2));
+
+                porPriceMap.set(porId, unitPrice);
+                porDiscMap.set(porId, discAmt);
+            }
+
             const lr = latestReceiptInfo(porRows);
-            const rs = buildReceiptSummary(porRows);
-            const allPosted = rs.receiptsCount > 0 && rs.unpostedReceiptsCount === 0;
-            const isClosed = fully && allPosted;
-            const fullyReceived = fully && !allPosted;
+            const rs = buildReceiptSummary(porRows, porPriceMap, porDiscMap);
+            
+            const isHeaderPosted = toNum(po?.is_posted) === 1;
+            const isClosed = isHeaderPosted;
+            const fullyReceived = fully && !isClosed;
 
             // Align totalAmount with what's actually being posted (Items already received but NOT YET posted to inventory)
             const unpostedRows = porRows.filter(r => toNum(r.isPosted) === 0 && (toNum(r.received_quantity) > 0 || toStr(r.receipt_no)));
             let listTotal = 0;
             if (unpostedRows.length > 0) {
-                const sid = toNum(po?.supplier_name);
-                const psl = sid ? await fetchProductSupplierLinks(base, sid) : new Map();
-                const poDType = po?.discount_type as Record<string, unknown> | null | undefined;
-                const poDiscPct = resolveDiscountPercent(poDType);
-
                 for (const r of unpostedRows) {
-                    const pid = toNum(r.product_id);
-                    const bid = toNum(r.branch_id);
+                    const porId = toNum(r.purchase_order_product_id);
                     const qty = effectiveReceivedQty(r);
-                    const matchLine = lines.find(l => toNum(l.product_id) === pid && toNum(l.branch_id) === bid);
-                    const p = productsMap.get(pid);
-                    if (!p) continue; // ✅ Skip non-serialized items (Filtered by fetchProductsMap)
+                    const price = porPriceMap.get(porId) || 0;
+                    const disc = porDiscMap.get(porId) || 0;
 
-                    // Prioritize live Product Master cost for unposted rows in the list view
-                    const unitPrice = toNum(p?.cost_per_unit) || toNum(matchLine?.unit_price) || 0;
-                    const link = psl.get(pid);
-                    const discPct = link ? resolveDiscountPercent(link.discount_type) : poDiscPct;
-
-                    const lineGross = unitPrice * qty;
-                    const lineDisc = Number((lineGross * (discPct / 100)).toFixed(2));
-                    const lineNet = Number((lineGross - lineDisc).toFixed(2));
-                    
-                    listTotal += lineNet; // simplified for listing
+                    const lineNet = Number(((price * qty) - (disc * qty)).toFixed(2));
+                    listTotal += lineNet;
                 }
             } else {
                 listTotal = Number((toNum(po?.total_amount) - toNum(po?.discounted_amount)).toFixed(2));
             }
+
+            // Metrics adjustment for CLOSED status
+            // If CLOSED, everything is considered 'Posted'
+            const finalPostedInv = isClosed ? (rs.postedQty + rs.unpostedQty) : rs.postedQty;
+            const finalUnpostedInv = isClosed ? 0 : rs.unpostedQty;
+            const finalPostedAmt = isClosed ? Number((toNum(po?.total_amount) - toNum(po?.discounted_amount)).toFixed(2)) : 0;
+            const finalUnpostedAmt = isClosed ? 0 : rs.postedAmt;
 
             list.push({
                 id: String(poId),
@@ -924,7 +967,7 @@ export async function GET() {
                     isClosed,
                     fullyReceived,
                     // Only flag PARTIAL_POSTED when not fully received
-                    hasAnyPosted: !fully && hasAnyPosted,
+                    hasAnyPosted: !fully && totalAnyPosted,
                 }),
                 totalAmount: listTotal,
                 currency: "PHP",
@@ -932,7 +975,11 @@ export async function GET() {
                 branchesCount: branches.size,
                 receiptsCount: rs.receiptsCount,
                 unpostedReceiptsCount: rs.unpostedReceiptsCount,
-                postingReady: true,
+                postedInventory: finalPostedInv,
+                unpostedInventory: finalUnpostedInv,
+                postedAmount: finalPostedAmt,
+                unpostedAmount: finalUnpostedAmt,
+                postingReady: !isClosed,
                 latestReceiptNo: lr.receipt_no || undefined,
                 latestReceiptDate: lr.received_date || lr.receipt_date || undefined,
             });
@@ -1216,6 +1263,10 @@ export async function POST(req: NextRequest) {
                 postingReady: true,
                 latestReceiptNo: lr.receipt_no || undefined,
                 latestReceiptDate: lr.received_date || lr.receipt_date || undefined,
+                postedInventory: rs.postedQty,
+                unpostedInventory: rs.unpostedQty,
+                postedAmount: 0,
+                unpostedAmount: rs.postedAmt,
                 grossAmount: detailGross,
                 discountAmount: detailDisc,
                 vatAmount: detailVat,
