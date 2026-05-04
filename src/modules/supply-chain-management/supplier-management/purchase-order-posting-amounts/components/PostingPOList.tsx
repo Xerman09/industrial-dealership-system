@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { RefreshCw, FileCheck2, ChevronRight, ChevronLeft } from "lucide-react";
+import { RefreshCw, FileCheck2, ChevronRight, ChevronLeft, CircleDollarSign } from "lucide-react";
 import { usePostingOfPo } from "../providers/PostingOfPoProvider";
+import { money } from "../utils/format";
 
 function statusBadge(status: string) {
     const s = String(status || "").toUpperCase();
@@ -46,11 +47,30 @@ export function PostingPOList() {
 
     const filtered = React.useMemo(() => {
         const s = q.trim().toLowerCase();
-        if (!s) return list ?? [];
-        return (list ?? []).filter((x) => {
-            const a = String(x?.poNumber ?? "").toLowerCase();
-            const b = String(x?.supplierName ?? "").toLowerCase();
-            return a.includes(s) || b.includes(s);
+        let result = list ?? [];
+
+        if (s) {
+            result = result.filter((x) => {
+                const a = String(x?.poNumber ?? "").toLowerCase();
+                const b = String(x?.supplierName ?? "").toLowerCase();
+                return a.includes(s) || b.includes(s);
+            });
+        }
+
+        // Arrange: unposted on top, closed on last
+        return [...result].sort((a, b) => {
+            // Priority 1: CLOSED status moves to bottom
+            const aClosed = a.status === "CLOSED";
+            const bClosed = b.status === "CLOSED";
+            if (aClosed !== bClosed) return aClosed ? 1 : -1;
+
+            // Priority 2: Unposted receipts move to top
+            const aUnposted = (a.unpostedReceiptsCount || 0) > 0;
+            const bUnposted = (b.unpostedReceiptsCount || 0) > 0;
+            if (aUnposted !== bUnposted) return aUnposted ? -1 : 1;
+
+            // Secondary: Descending PO Number
+            return b.poNumber.localeCompare(a.poNumber, undefined, { numeric: true });
         });
     }, [list, q]);
 
@@ -190,8 +210,8 @@ export function PostingPOList() {
                                     active ? "ring-2 ring-primary/40 border-primary/50 bg-muted/30 shadow-sm" : "bg-background"
                                 )}
                             >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
+                                <div className="relative">
+                                    <div className="min-w-0 pr-6">
                                         <div className="flex items-center gap-2">
                                             <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-muted shrink-0">
                                                 <FileCheck2 className="h-4 w-4 text-muted-foreground" />
@@ -213,12 +233,32 @@ export function PostingPOList() {
                                             >
                                                 {statusLabel(po.status)}
                                             </Badge>
-                                            <span className="bg-muted/50 px-1.5 py-0.5 rounded border border-border/50">
-                                                {po.itemsCount} ITEMS
-                                            </span>
                                             <span className="bg-muted/50 px-1.5 py-0.5 rounded border border-border/50 text-primary">
-                                                {po.unpostedReceiptsCount} UNPOSTED
+                                                {po.unpostedReceiptsCount} RECEIPTS FOR POSTING
                                             </span>
+                                        </div>
+
+                                        <div className="mt-3 border-t border-border/50 pt-3">
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center gap-1.5 text-[9px] font-black text-muted-foreground uppercase tracking-wider">
+                                                    <CircleDollarSign className="h-3 w-3 text-blue-500" />
+                                                    Amount Status
+                                                </div>
+                                                <div className="flex flex-col gap-0.5 pl-4.5">
+                                                    <div className="text-[10px] flex justify-between gap-2">
+                                                        <span className="text-muted-foreground uppercase text-[9px]">Posted:</span>
+                                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                                            {po.status === "CLOSED" ? money(po.postedAmount || 0, po.currency || "PHP") : "—"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-[10px] flex justify-between gap-2">
+                                                        <span className="text-muted-foreground uppercase text-[9px]">For Posting:</span>
+                                                        <span className="font-bold text-primary">
+                                                            {po.status === "CLOSED" ? "—" : money(po.unpostedAmount || 0, po.currency || "PHP")}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {po.status === "PARTIAL_POSTED" && (
@@ -229,7 +269,7 @@ export function PostingPOList() {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center h-9 self-center">
+                                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
                                         <ChevronRight className={cn("h-4 w-4 transition-transform", active ? "text-primary translate-x-0.5" : "text-muted-foreground")} />
                                     </div>
                                 </div>

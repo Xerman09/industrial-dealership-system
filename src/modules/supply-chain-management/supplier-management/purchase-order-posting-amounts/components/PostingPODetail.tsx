@@ -51,19 +51,22 @@ export function PostingPODetail() {
     }
 
     const status = String(selectedPO.status || "").toUpperCase();
-    const unposted = (selectedPO.receipts ?? []).filter(
-        (r) => Number(r.isPosted) !== 1 && r.isPosted !== true
+    const isClosed = status === "CLOSED";
+    const unposted = isClosed ? [] : (selectedPO.receipts ?? []).filter(
+        (r) => Number(r.isPosted) === 1 || r.isPosted === true
     );
 
     // Show "Post All" when:
+    // - NOT CLOSED AND
     // - No receipts yet (status-only PO, e.g. PARTIAL) OR
     // - There are unposted receipts (PARTIAL_POSTED still has more to post) OR
     // - Status is RECEIVED (fully received, has unposted receipts)
-    const showPostAll =
+    const showPostAll = !isClosed && (
         selectedPO.receiptsCount === 0 ||
         selectedPO.unpostedReceiptsCount > 0 ||
         status === "PARTIAL" ||
-        status === "PARTIAL_POSTED";
+        status === "PARTIAL_POSTED"
+    );
 
     // Info banner for partial-posted POs: clarify they can keep posting as more is received
     const isPartialPosted = status === "PARTIAL_POSTED";
@@ -118,7 +121,7 @@ export function PostingPODetail() {
                                 {money(selectedPO.totalAmount ?? 0, selectedPO.currency ?? "PHP")}
                             </span>
                             <span className="bg-background px-2 py-0.5 rounded border border-border/50 text-primary">
-                                {unposted.length} UNPOSTED RECEIPTS
+                                {unposted.length} RECEIPTS FOR POSTING
                             </span>
                         </div>
                     </div>
