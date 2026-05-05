@@ -10,8 +10,9 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import Barcode from "react-barcode";
 import { useReactToPrint } from "react-to-print";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   AlertTriangle, 
   QrCode, 
@@ -28,7 +29,7 @@ import {
 import { format, isPast, isBefore, addDays } from "date-fns";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { Printer } from "lucide-react";
+import { Printer, Barcode as BarcodeIcon } from "lucide-react";
 
 interface Props {
   data: CylinderAsset[];
@@ -71,6 +72,31 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
   const [isAllSelectedGlobal, setIsAllSelectedGlobal] = useState(false);
   const [isFetchingGlobal, setIsFetchingGlobal] = useState(false);
   const [globalAssets, setGlobalAssets] = useState<CylinderAsset[]>([]);
+  const [printMode, setPrintMode] = useState<"QR" | "BARCODE">("QR");
+  const [isBulkPrintDialogOpen, setIsBulkPrintDialogOpen] = useState(false);
+  const [isBulkPreviewOpen, setIsBulkPreviewOpen] = useState(false);
+  const [columns, setColumns] = useState(3);
+  const [labelSize, setLabelSize] = useState(1);
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [paperSize, setPaperSize] = useState<"A4" | "Letter">("Letter");
+
+  const selectedAssets = isAllSelectedGlobal 
+    ? globalAssets 
+    : data.filter(item => selectedIds.some(id => String(id) === String(item.id)));
+
+  // Calculate items per page based on layout
+  const itemsPerPage = useMemo(() => {
+    const rows = orientation === "portrait" ? 5 : 3;
+    return columns * rows;
+  }, [columns, orientation]);
+
+  const paginatedAssets = useMemo(() => {
+    const pages = [];
+    for (let i = 0; i < selectedAssets.length; i += itemsPerPage) {
+      pages.push(selectedAssets.slice(i, i + itemsPerPage));
+    }
+    return pages;
+  }, [selectedAssets, itemsPerPage]);
   
   const printRef = useRef<HTMLDivElement>(null);
   const bulkPrintRef = useRef<HTMLDivElement>(null);
@@ -124,9 +150,7 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
     }
   };
 
-  const selectedAssets = isAllSelectedGlobal 
-    ? globalAssets 
-    : data.filter(item => selectedIds.some(id => String(id) === String(item.id)));
+
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -379,12 +403,12 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
             <div className="flex items-center gap-2">
               <Button 
                 size="sm" 
-                onClick={() => handleBulkPrint()}
+                onClick={() => setIsBulkPrintDialogOpen(true)}
                 disabled={isFetchingGlobal}
                 className="h-8 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm border-none"
               >
                 {isFetchingGlobal ? <div className="h-3 w-3 animate-spin border-2 border-white border-t-transparent rounded-full" /> : <Printer className="h-4 w-4" />}
-                Print QR Tags ({isAllSelectedGlobal ? pagination.total : selectedIds.length})
+                Print Labels ({isAllSelectedGlobal ? pagination.total : selectedIds.length})
               </Button>
             </div>
           </div>
@@ -598,84 +622,472 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
         )}
       </Card>
 
-      {/* ── QR Code Modal ───────────────────────────────── */}
+      {/* ── Asset Label Modal (QR & Barcode) ──────────────── */}
       <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
-        <DialogContent className="sm:max-w-xs p-6 overflow-hidden">
+        <DialogContent className="sm:max-w-md p-6 overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-center flex flex-col items-center gap-2">
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-full text-blue-600">
-                <QrCode className="h-6 w-6" />
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-full ${printMode === 'QR' ? 'bg-blue-100 text-blue-600' : 'bg-zinc-100 text-zinc-400'}`}>
+                  <QrCode className="h-6 w-6" />
+                </div>
+                <div className={`p-3 rounded-full ${printMode === 'BARCODE' ? 'bg-indigo-100 text-indigo-600' : 'bg-zinc-100 text-zinc-400'}`}>
+                  <BarcodeIcon className="h-6 w-6" />
+                </div>
               </div>
-              Asset QR Code
+              Asset Identification Labels
             </DialogTitle>
             <DialogDescription className="text-center pt-2">
-              Scan to identify this cylinder
+              Select label type and print for this cylinder
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col items-center justify-center py-6 gap-4">
-            <div ref={printRef} className="p-8 bg-white flex flex-col items-center justify-center gap-4 min-w-[280px]">
-              {selectedAsset && (
-                <>
-                  <div className="p-2 border-2 border-black rounded-lg mb-2">
-                    <QRCodeSVG 
-                      value={JSON.stringify({
-                        id: selectedAsset.id,
-                        sn: selectedAsset.serial_number,
-                        type: "CYLINDER_ASSET"
-                      })}
-                      size={200}
-                      level="H"
-                    />
-                  </div>
-                  <div className="text-center space-y-1">
-                    <p className="font-mono font-bold text-2xl text-black">{selectedAsset.serial_number}</p>
-                    <p className="text-sm font-bold text-black uppercase tracking-widest">{selectedAsset.product?.product_name}</p>
-                    <p className="text-[10px] text-zinc-500">{format(new Date(), 'PPpp')}</p>
-                  </div>
-                </>
-              )}
+          <div className="flex flex-col items-center justify-center py-6 gap-6">
+            <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg w-full max-w-[240px]">
+              <Button 
+                variant={printMode === 'QR' ? "outline" : "ghost"} 
+                size="sm" 
+                className={`flex-1 h-8 text-xs gap-2 border-none ${printMode === 'QR' ? 'bg-white shadow-sm hover:bg-white' : 'text-muted-foreground'}`}
+                onClick={() => setPrintMode('QR')}
+              >
+                <QrCode className="h-3.5 w-3.5" />
+                QR Code
+              </Button>
+              <Button 
+                variant={printMode === 'BARCODE' ? "outline" : "ghost"} 
+                size="sm" 
+                className={`flex-1 h-8 text-xs gap-2 border-none ${printMode === 'BARCODE' ? 'bg-white shadow-sm hover:bg-white' : 'text-muted-foreground'}`}
+                onClick={() => setPrintMode('BARCODE')}
+              >
+                <BarcodeIcon className="h-3.5 w-3.5" />
+                Barcode
+              </Button>
+            </div>
+
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-2xl blur-xl opacity-50 group-hover:opacity-100 transition duration-500" />
+              <div ref={printRef} className="relative p-6 bg-white flex flex-col items-center justify-center gap-4 w-[280px] shadow-2xl rounded-xl border border-zinc-100 mx-auto">
+                {selectedAsset && (
+                  <>
+                    <div className="flex items-center justify-center min-h-[160px]">
+                      <AnimatePresence mode="wait">
+                        {printMode === 'QR' ? (
+                          <motion.div 
+                            key="qr"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="p-2 border-4 border-black rounded-xl bg-white"
+                          >
+                            <QRCodeSVG 
+                              value={JSON.stringify({
+                                id: selectedAsset.id,
+                                sn: selectedAsset.serial_number,
+                                type: "CYLINDER_ASSET"
+                              })}
+                              size={140}
+                              level="H"
+                            />
+                          </motion.div>
+                        ) : (
+                          <motion.div 
+                            key="barcode"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="p-3 border-4 border-black rounded-xl bg-white flex items-center justify-center overflow-hidden"
+                          >
+                            <Barcode 
+                              value={selectedAsset.serial_number}
+                              width={1.8}
+                              height={80}
+                              fontSize={12}
+                              background="#ffffff"
+                              lineColor="#000000"
+                              margin={0}
+                              displayValue={false}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    <div className="text-center space-y-1 w-full">
+                      <p className="font-mono font-black text-2xl text-black tracking-tight leading-none">{selectedAsset.serial_number}</p>
+                      <div className="h-[1.5px] bg-black w-full opacity-10 my-1" />
+                      <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest truncate max-w-full">{selectedAsset.product?.product_name}</p>
+                      <div className="flex items-center justify-between text-[7px] text-zinc-400 font-bold pt-1 uppercase">
+                        <span>Seagas Industrial</span>
+                        <span>{format(new Date(), 'yyyy-MM-dd')}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            <Button variant="outline" className="h-9" onClick={() => handlePrint()}>
-              Print Tag
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <Button 
+              variant="outline" 
+              className="h-11 font-semibold gap-2 border-zinc-200 hover:bg-zinc-50" 
+              onClick={() => handlePrint()}
+            >
+              <Printer className="h-4 w-4" />
+              Print Label
             </Button>
-            <Button className="h-9 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setQrModalOpen(false)}>
-              Close
+            <Button 
+              className="h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-500/20" 
+              onClick={() => setQrModalOpen(false)}
+            >
+              Done
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk Print Selection Dialog ─────────────────── */}
+      <Dialog open={isBulkPrintDialogOpen} onOpenChange={setIsBulkPrintDialogOpen}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle>Bulk Print Labels</DialogTitle>
+            <DialogDescription>
+              Choose the label format for {isAllSelectedGlobal ? pagination.total : selectedIds.length} assets.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-4 py-6">
+            <Card 
+              className={`relative cursor-pointer transition-all duration-300 border-2 overflow-hidden ${printMode === 'QR' ? 'border-blue-600 bg-blue-50/50' : 'border-zinc-200 hover:border-zinc-300'}`}
+              onClick={() => setPrintMode('QR')}
+            >
+              <CardContent className="p-6 flex flex-col items-center gap-3">
+                <div className={`p-4 rounded-2xl ${printMode === 'QR' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-zinc-100 text-zinc-500'}`}>
+                  <QrCode className="h-8 w-8" />
+                </div>
+                <div className="text-center">
+                  <p className="font-bold">QR Codes</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Detailed Data</p>
+                </div>
+                {printMode === 'QR' && (
+                  <div className="absolute top-2 right-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card 
+              className={`relative cursor-pointer transition-all duration-300 border-2 overflow-hidden ${printMode === 'BARCODE' ? 'border-indigo-600 bg-indigo-50/50' : 'border-zinc-200 hover:border-zinc-300'}`}
+              onClick={() => setPrintMode('BARCODE')}
+            >
+              <CardContent className="p-6 flex flex-col items-center gap-3">
+                <div className={`p-4 rounded-2xl ${printMode === 'BARCODE' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-zinc-100 text-zinc-500'}`}>
+                  <BarcodeIcon className="h-8 w-8" />
+                </div>
+                <div className="text-center">
+                  <p className="font-bold">Barcodes</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Standard Scanning</p>
+                </div>
+                {printMode === 'BARCODE' && (
+                  <div className="absolute top-2 right-2">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1 h-11" onClick={() => setIsBulkPrintDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+              onClick={() => {
+                setIsBulkPrintDialogOpen(false);
+                setIsBulkPreviewOpen(true);
+              }}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Configure Layout
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk Print Preview Modal ────────────────────── */}
+      <Dialog open={isBulkPreviewOpen} onOpenChange={setIsBulkPreviewOpen}>
+        <DialogContent className="sm:max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+          <DialogHeader className="p-4 bg-white dark:bg-zinc-900 border-b shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>Print Preview</DialogTitle>
+                <DialogDescription>
+                  Adjust layout settings before printing {selectedAssets.length} labels.
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Orientation:</Label>
+                  <Select value={orientation} onValueChange={(v) => setOrientation(v as "portrait" | "landscape")}>
+                    <SelectTrigger className="w-[100px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="portrait">Portrait</SelectItem>
+                      <SelectItem value="landscape">Landscape</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Size:</Label>
+                  <Select value={paperSize} onValueChange={(v) => setPaperSize(v as "A4" | "Letter")}>
+                    <SelectTrigger className="w-[100px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Letter">Letter</SelectItem>
+                      <SelectItem value="A4">A4</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Columns:</Label>
+                  <Select value={String(columns)} onValueChange={(v) => setColumns(Number(v))}>
+                    <SelectTrigger className="w-[80px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 Col</SelectItem>
+                      <SelectItem value="3">3 Col</SelectItem>
+                      <SelectItem value="4">4 Col</SelectItem>
+                      <SelectItem value="5">5 Col</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Zoom:</Label>
+                  <Select value={String(labelSize)} onValueChange={(v) => setLabelSize(Number(v))}>
+                    <SelectTrigger className="w-[80px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0.8">80%</SelectItem>
+                      <SelectItem value="1">100%</SelectItem>
+                      <SelectItem value="1.2">120%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="h-8 w-px bg-zinc-200 mx-2" />
+                <Button 
+                  onClick={() => handleBulkPrint()} 
+                  className="h-9 gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print Now
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-12 flex flex-col items-center gap-16 bg-zinc-200/50 dark:bg-zinc-950/50 custom-scrollbar">
+            {paginatedAssets.map((pageAssets, pageIdx) => {
+              const pageWidth = orientation === 'portrait' 
+                ? (paperSize === 'Letter' ? '8.5in' : '8.27in')
+                : (paperSize === 'Letter' ? '11in' : '11.69in');
+              const pageHeight = orientation === 'portrait'
+                ? (paperSize === 'Letter' ? '11in' : '11.69in')
+                : (paperSize === 'Letter' ? '8.5in' : '8.27in');
+
+              return (
+                <div 
+                  key={pageIdx}
+                  className="flex flex-col items-center shrink-0"
+                  style={{
+                    width: `calc(${pageWidth} * ${labelSize})`,
+                    height: `calc(${pageHeight} * ${labelSize})`,
+                  }}
+                >
+                  <div 
+                    className="bg-white shadow-2xl origin-top-left transition-all duration-300 flex flex-col" 
+                    style={{ 
+                      transform: `scale(${labelSize})`,
+                      width: pageWidth,
+                      height: pageHeight,
+                      padding: '0.5in',
+                    }}
+                  >
+                    <div className="flex justify-between items-center mb-4 text-[10px] text-zinc-400 font-bold uppercase tracking-widest border-b pb-2">
+                      <span>Seagas Industrial - Page {pageIdx + 1} of {paginatedAssets.length}</span>
+                      <span>{selectedAssets.length} Total Assets</span>
+                    </div>
+                    <div 
+                      className="grid gap-x-4 gap-y-6 flex-1 content-start" 
+                      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+                    >
+                      {pageAssets.map((asset) => (
+                        <div 
+                          key={asset.id} 
+                          className="flex flex-col items-center justify-center p-3 border border-zinc-200 rounded-lg bg-white overflow-hidden"
+                          style={{ aspectRatio: '1/1.2' }}
+                        >
+                          <div className="flex-1 flex items-center justify-center w-full mb-2 overflow-hidden">
+                            {printMode === 'QR' ? (
+                              <div className="p-1 border-2 border-black rounded bg-white">
+                                <QRCodeSVG 
+                                  value={JSON.stringify({
+                                    id: asset.id,
+                                    sn: asset.serial_number,
+                                    type: "CYLINDER_ASSET"
+                                  })}
+                                  size={100 / (columns / 3)}
+                                  level="M"
+                                />
+                              </div>
+                            ) : (
+                              <div className="p-1 border-2 border-black rounded bg-white w-full flex items-center justify-center overflow-hidden scale-90">
+                                <Barcode 
+                                  value={asset.serial_number}
+                                  width={1.5 / (columns / 3)}
+                                  height={60}
+                                  fontSize={12}
+                                  margin={0}
+                                  displayValue={false}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-center w-full space-y-0.5 px-1 overflow-hidden">
+                            <p 
+                              className="font-mono font-black text-black leading-tight truncate"
+                              style={{ fontSize: asset.serial_number.length > 15 ? '8px' : asset.serial_number.length > 12 ? '10px' : '12px' }}
+                            >
+                              {asset.serial_number}
+                            </p>
+                            <div className="h-[1px] bg-black w-full opacity-10" />
+                            <p 
+                              className="font-bold text-zinc-800 uppercase leading-tight tracking-wider"
+                              style={{ 
+                                fontSize: (asset.product?.product_name?.length || 0) > 30 ? '5px' : (asset.product?.product_name?.length || 0) > 20 ? '6px' : '7px',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {asset.product?.product_name}
+                            </p>
+                            <p className="text-[6px] text-zinc-400 font-bold uppercase tracking-widest leading-none">Seagas</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>
 
       {/* ── Hidden Bulk Print Component ────────────────── */}
       <div className="hidden">
-        <div ref={bulkPrintRef} className="print:block p-4">
-          <div className="grid grid-cols-3 gap-4">
-            {selectedAssets.map((asset) => (
+        <div ref={bulkPrintRef} className="print:block bg-white">
+          <style dangerouslySetInnerHTML={{ __html: `
+            @page { 
+              size: ${paperSize} ${orientation}; 
+              margin: 0; 
+            }
+            @media print {
+              body { margin: 0; }
+              .print-page {
+                page-break-after: always;
+                page-break-inside: avoid;
+              }
+            }
+          `}} />
+          {paginatedAssets.map((pageAssets, pageIdx) => (
+            <div 
+              key={pageIdx}
+              className="print-page bg-white"
+              style={{ 
+                width: orientation === 'portrait' 
+                  ? (paperSize === 'Letter' ? '8.5in' : '8.27in')
+                  : (paperSize === 'Letter' ? '11in' : '11.69in'),
+                height: orientation === 'portrait'
+                  ? (paperSize === 'Letter' ? '11in' : '11.69in')
+                  : (paperSize === 'Letter' ? '8.5in' : '8.27in'),
+                padding: '0.5in',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
               <div 
-                key={asset.id} 
-                className="flex flex-col items-center justify-center p-4 border border-zinc-300 rounded-lg break-inside-avoid"
+                className="grid gap-x-4 gap-y-6 content-start"
+                style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
               >
-                <div className="p-1 border border-black rounded mb-2">
-                  <QRCodeSVG 
-                    value={JSON.stringify({
-                      id: asset.id,
-                      sn: asset.serial_number,
-                      type: "CYLINDER_ASSET"
-                    })}
-                    size={140}
-                    level="M"
-                  />
-                </div>
-                <div className="text-center">
-                  <p className="font-mono font-bold text-base text-black leading-tight">{asset.serial_number}</p>
-                  <p className="text-[10px] font-medium text-black uppercase truncate max-w-[150px]">{asset.product?.product_name}</p>
-                </div>
+                {pageAssets.map((asset) => (
+                  <div 
+                    key={asset.id} 
+                    className="flex flex-col items-center justify-center p-3 border border-zinc-300 rounded-lg bg-white"
+                    style={{ aspectRatio: '1/1.2' }}
+                  >
+                    <div className="flex-1 flex items-center justify-center w-full mb-2">
+                      {printMode === 'QR' ? (
+                        <div className="p-1 border-2 border-black rounded bg-white">
+                          <QRCodeSVG 
+                            value={JSON.stringify({
+                              id: asset.id,
+                              sn: asset.serial_number,
+                              type: "CYLINDER_ASSET"
+                            })}
+                            size={100 / (columns / 3)}
+                            level="M"
+                          />
+                        </div>
+                      ) : (
+                        <div className="p-1 border-2 border-black rounded bg-white w-full flex items-center justify-center overflow-hidden scale-90">
+                          <Barcode 
+                            value={asset.serial_number}
+                            width={1.5 / (columns / 3)}
+                            height={60}
+                            fontSize={12}
+                            margin={0}
+                            displayValue={false}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center w-full space-y-0.5 px-1">
+                      <p 
+                        className="font-mono font-black text-black leading-tight"
+                        style={{ fontSize: asset.serial_number.length > 15 ? '8px' : asset.serial_number.length > 12 ? '10px' : '12px' }}
+                      >
+                        {asset.serial_number}
+                      </p>
+                      <div className="h-[1px] bg-black w-full opacity-10" />
+                      <p 
+                        className="font-bold text-zinc-800 uppercase leading-tight tracking-wider"
+                        style={{ 
+                          fontSize: (asset.product?.product_name?.length || 0) > 30 ? '5px' : (asset.product?.product_name?.length || 0) > 20 ? '6px' : '7px',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {asset.product?.product_name}
+                      </p>
+                      <p className="text-[6px] text-zinc-400 font-bold uppercase tracking-[0.2em]">Seagas Industrial</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+              <div className="absolute bottom-[0.2in] left-0 right-0 text-center text-[8px] text-zinc-300 font-bold uppercase tracking-widest">
+                Page {pageIdx + 1} of {paginatedAssets.length}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
