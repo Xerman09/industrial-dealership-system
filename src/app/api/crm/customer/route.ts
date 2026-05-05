@@ -97,6 +97,28 @@ function normalizeEmptyToNull(value: unknown) {
   return value;
 }
 
+async function fetchStoreTypeName(
+  storeTypeId: number | string | null | undefined,
+  token?: string,
+): Promise<string | null> {
+  if (!storeTypeId) return null;
+  const res = await fetchWithRetry(
+    `${DIRECTUS_URL}/items/store_type/${storeTypeId}`,
+    { cache: "no-store", headers: token ? { Authorization: `Bearer ${token}` } : {} }
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json?.data?.store_type ? String(json.data.store_type) : null;
+}
+
+async function isHouseholdStoreType(
+  storeTypeId: number | string | null | undefined,
+  token?: string,
+) {
+  const name = await fetchStoreTypeName(storeTypeId, token);
+  return Boolean(name && name.toLowerCase().includes("household"));
+}
+
 async function fetchClassificationName(
   classificationId: number | string | null | undefined,
   token?: string,
@@ -396,31 +418,36 @@ export async function POST(req: NextRequest) {
           : newCustomerData.location;
     }
 
-    const isWalkIn = await isWalkInClassification(
+    const isWalkInClass = await isWalkInClassification(
       newCustomerData.classification,
       token,
     );
+    const isHouseholdStore = await isHouseholdStoreType(
+      newCustomerData.store_type,
+      token,
+    );
+    const isWalkIn = isWalkInClass || isHouseholdStore;
     const normalizedTin = normalizeTin(newCustomerData.customer_tin);
+
+    if (
+      !String(newCustomerData.province ?? "").trim() ||
+      !String(newCustomerData.city ?? "").trim() ||
+      !String(newCustomerData.brgy ?? "").trim()
+    ) {
+      return NextResponse.json(
+        {
+          error: "Delivery address is required",
+        },
+        { status: 400 },
+      );
+    }
 
     if (!isWalkIn) {
       if (!normalizedTin)
         return NextResponse.json(
-          { error: "TIN is required unless classification is Walk-in" },
+          { error: "TIN is required for business accounts" },
           { status: 400 },
         );
-      if (
-        !String(newCustomerData.province ?? "").trim() ||
-        !String(newCustomerData.city ?? "").trim() ||
-        !String(newCustomerData.brgy ?? "").trim()
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Delivery address is required unless classification is Walk-in",
-          },
-          { status: 400 },
-        );
-      }
 
       const dup = await findCustomerByTin(normalizedTin, token);
       if (dup.length > 0)
@@ -433,9 +460,6 @@ export async function POST(req: NextRequest) {
       newCustomerData.customer_tin = normalizeEmptyToNull(
         newCustomerData.customer_tin,
       );
-      newCustomerData.province = normalizeEmptyToNull(newCustomerData.province);
-      newCustomerData.city = normalizeEmptyToNull(newCustomerData.city);
-      newCustomerData.brgy = normalizeEmptyToNull(newCustomerData.brgy);
     }
 
     const createRes = await fetchWithRetry(
@@ -446,7 +470,7 @@ export async function POST(req: NextRequest) {
     const createJson = await createRes.json();
     const newId = createJson.data.id;
 
-    const generatedCode = `MAIN-${String(newId).padStart(4, "0")}`;
+    const generatedCode = isWalkIn ? `WALK-IN-${String(newId).padStart(8, "0")}` : `MAIN-${String(newId).padStart(4, "0")}`;
     const patchRes = await fetchWithRetry(
       `${DIRECTUS_URL}/items/${COLLECTIONS.CUSTOMER}/${newId}`,
       {
@@ -512,7 +536,10 @@ export async function PATCH(req: NextRequest) {
 
       const classificationId =
         updateData.classification ?? existing?.classification ?? null;
-      const isWalkIn = await isWalkInClassification(classificationId, token);
+      const storeTypeId = updateData.store_type ?? existing?.store_type ?? null;
+      const isWalkInClass = await isWalkInClassification(classificationId, token);
+      const isHouseholdStore = await isHouseholdStoreType(storeTypeId, token);
+      const isWalkIn = isWalkInClass || isHouseholdStore;
       const resolvedTin =
         updateData.customer_tin !== undefined
           ? normalizeTin(updateData.customer_tin)
@@ -521,7 +548,7 @@ export async function PATCH(req: NextRequest) {
       if (!isWalkIn) {
         if (!resolvedTin)
           return NextResponse.json(
-            { error: "TIN is required unless classification is Walk-in" },
+            { error: "TIN is required for business accounts" },
             { status: 400 },
           );
         const dup = await findCustomerByTin(resolvedTin, token, id);
@@ -536,12 +563,6 @@ export async function PATCH(req: NextRequest) {
           updateData.customer_tin = normalizeEmptyToNull(
             updateData.customer_tin,
           );
-        if (updateData.province !== undefined)
-          updateData.province = normalizeEmptyToNull(updateData.province);
-        if (updateData.city !== undefined)
-          updateData.city = normalizeEmptyToNull(updateData.city);
-        if (updateData.brgy !== undefined)
-          updateData.brgy = normalizeEmptyToNull(updateData.brgy);
       }
     }
 

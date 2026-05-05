@@ -17,36 +17,26 @@ import {
     Form, FormControl, FormField, FormItem, FormLabel, FormMessage
 } from "@/components/ui/form";
 import {
-    Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList
-} from "@/components/ui/command";
-import {
     Popover, PopoverContent, PopoverTrigger
 } from "@/components/ui/popover";
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuTrigger, DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import {
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { CustomerWithRelations, PaymentTerm, ReferenceOption } from "../types";
 import { BankAccountManager } from "./BankAccountManager";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
-
-interface CreatableComboboxProps {
-    items: ReferenceOption[];
-    value: number | string | null;
-    onChange: (value: number | string) => void;
-    onCreate: (name: string) => void;
-    placeholder: string;
-    itemName: string;
-}
 
 interface LocationOption {
     code: string;
@@ -93,81 +83,167 @@ const renderImagePreview = (imageId: string | null | undefined) => {
 };
 
 // ============================================================================
-// CREATABLE COMBOBOX
+// FIELD COMBOBOX — DropdownMenu + sticky search + scrollable items (+ optional create)
 // ============================================================================
-function CreatableCombobox({ items, value, onChange, onCreate, placeholder, itemName }: CreatableComboboxProps) {
+interface FieldComboboxProps {
+    items: ReferenceOption[];
+    value: number | string | null | undefined;
+    onChange: (value: number | string) => void;
+    onCreate?: (name: string) => void;
+    placeholder: string;
+    itemName: string;
+    disabled?: boolean;
+}
+
+function FieldCombobox({ items = [], value, onChange, onCreate, placeholder, itemName, disabled }: FieldComboboxProps) {
     const [open, setOpen] = useState(false);
-    const [inputValue, setInputValue] = useState("");
-    const selectedItem = items.find((i) => String(i.id) === String(value));
-    const exactMatch = items.some((i) => i.name.toLowerCase() === inputValue.toLowerCase());
+    const [query, setQuery] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const normalizedQuery = query.trim().toLowerCase();
+
+    const selectedItem = useMemo(() => {
+        if (!value) return undefined;
+        return items.find(i => String(i.id) === String(value));
+    }, [items, value]);
+
+    const filteredItems = useMemo(() => {
+        if (!normalizedQuery) return items;
+        return items.filter(i => i.name.toLowerCase().includes(normalizedQuery));
+    }, [items, normalizedQuery]);
+
+    const hasExactMatch = filteredItems.some(i => i.name.toLowerCase() === normalizedQuery);
+    const showCreate = !!onCreate && normalizedQuery.length > 0 && !hasExactMatch;
+
+    const handleOpenChange = (next: boolean) => {
+        setOpen(next);
+        if (!next) setQuery("");
+        if (next) setTimeout(() => inputRef.current?.focus(), 50);
+    };
+
+    const handleSelect = (id: number | string) => {
+        onChange(id);
+        setOpen(false);
+        setQuery("");
+    };
+
+    const handleCreate = () => {
+        const trimmed = query.trim();
+        if (!trimmed || !onCreate) return;
+        onCreate(trimmed);
+        setOpen(false);
+        setQuery("");
+    };
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+            <DropdownMenuTrigger asChild>
                 <FormControl>
-                    <Button variant="outline" role="combobox"
-                        className={cn("w-full h-11 justify-between bg-muted/30", !value && "text-muted-foreground")}>
-                        {selectedItem ? selectedItem.name : placeholder}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        disabled={disabled}
+                        className={cn(
+                            "w-full h-11 justify-between bg-muted/30",
+                            !value && "text-muted-foreground"
+                        )}
+                    >
+                        <span className="truncate">{selectedItem?.name ?? placeholder}</span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
-            </PopoverTrigger>
-            <PopoverContent className="w-75 p-0 shadow-xl rounded-xl border-border/50">
-                <Command className="bg-transparent overflow-hidden rounded-xl">
-                    <CommandInput placeholder={`Search or create ${itemName}...`} onValueChange={setInputValue}
-                        className="h-11" />
-                    <CommandList className="max-h-50 overflow-y-auto custom-scrollbar">
-                        <CommandEmpty className="p-2">
-                            {inputValue && !exactMatch ? (
-                                <Button variant="ghost"
-                                    className="w-full justify-start text-primary text-xs font-bold uppercase tracking-widest"
-                                    onClick={() => {
-                                        onCreate(inputValue);
-                                        setInputValue("");
-                                        setOpen(false);
-                                    }}>
-                                    <Plus className="mr-2 h-4 w-4" /> Create &quot;{inputValue}&quot;
-                                </Button>
-                            ) : `No ${itemName} found.`}
-                        </CommandEmpty>
-                        <CommandGroup>
-                            {items.map((item, index) => (
-                                <CommandItem
-                                    key={item.id || `${item.name}-${index}`}
-                                    value={item.name}
-                                    onSelect={() => {
-                                        onChange(item.id);
-                                        setOpen(false);
-                                    }}
-                                >
-                                    <Check
-                                        className={cn("mr-2 h-4 w-4 text-primary", String(value) === String(item.id) ? "opacity-100" : "opacity-0")} />
-                                    {item.name}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                className="w-[300px] p-0 shadow-xl rounded-xl"
+                align="start"
+                sideOffset={6}
+            >
+                {/* Sticky search */}
+                <div className="flex items-center border-b px-3 sticky top-0 bg-popover z-10">
+                    <input
+                        ref={inputRef}
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={e => e.stopPropagation()}
+                        placeholder={`Search ${itemName}...`}
+                        className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                </div>
+                {/* Items — DropdownMenuContent handles overflow-y-auto */}
+                {filteredItems.length === 0 && !showCreate && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                        No {itemName} found.
+                    </div>
+                )}
+                {filteredItems.map(item => (
+                    <DropdownMenuItem
+                        key={String(item.id)}
+                        onSelect={() => handleSelect(item.id)}
+                        className={cn(
+                            "cursor-pointer px-3 py-2",
+                            String(value) === String(item.id) && "bg-accent/50 font-medium"
+                        )}
+                    >
+                        <Check className={cn(
+                            "mr-2 h-4 w-4 text-primary shrink-0",
+                            String(value) === String(item.id) ? "opacity-100" : "opacity-0"
+                        )} />
+                        {item.name}
+                    </DropdownMenuItem>
+                ))}
+                {showCreate && (
+                    <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onSelect={handleCreate}
+                            className="cursor-pointer px-3 py-2 text-primary font-semibold"
+                        >
+                            <Plus className="mr-2 h-4 w-4 shrink-0" />
+                            Create &quot;{query}&quot;
+                        </DropdownMenuItem>
+                    </>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 
 // ============================================================================
-// API-DRIVEN SEARCHABLE COMBOBOX
+// API-DRIVEN SEARCHABLE COMBOBOX (for geographic cascades)
 // ============================================================================
 function SearchableCombobox({ items, value, onChange, placeholder, disabled, isLoading }: SearchableComboboxProps) {
     const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const filteredItems = useMemo(() => {
+        if (!query.trim()) return items;
+        return items.filter(i => i.name.toLowerCase().includes(query.trim().toLowerCase()));
+    }, [items, query]);
+
+    const handleOpenChange = (next: boolean) => {
+        setOpen(next);
+        if (!next) setQuery("");
+        if (next) setTimeout(() => inputRef.current?.focus(), 50);
+    };
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+            <DropdownMenuTrigger asChild>
                 <FormControl>
                     <Button
+                        type="button"
                         variant="outline"
                         role="combobox"
+                        aria-expanded={open}
                         disabled={disabled || isLoading}
-                        className={cn("w-full h-11 justify-between bg-muted/30", !value && "text-muted-foreground", (disabled || isLoading) && "opacity-50 cursor-not-allowed")}
+                        className={cn(
+                            "w-full h-11 justify-between bg-muted/30",
+                            !value && "text-muted-foreground",
+                            (disabled || isLoading) && "opacity-50 cursor-not-allowed"
+                        )}
                     >
                         <div className="flex items-center truncate">
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />}
@@ -176,32 +252,46 @@ function SearchableCombobox({ items, value, onChange, placeholder, disabled, isL
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
-            </PopoverTrigger>
-            <PopoverContent className="w-75 p-0 shadow-xl rounded-xl border-border/50">
-                <Command className="bg-transparent overflow-hidden rounded-xl filter-none">
-                    <CommandInput placeholder="Search..." className="h-11" />
-                    <CommandList className="max-h-62.5 overflow-y-auto custom-scrollbar">
-                        <CommandEmpty>No results found.</CommandEmpty>
-                        <CommandGroup>
-                            {items.map((item, index) => (
-                                <CommandItem
-                                    key={item.code || `${item.name}-${index}`}
-                                    value={item.name}
-                                    onSelect={() => {
-                                        onChange(item.name);
-                                        setOpen(false);
-                                    }}
-                                >
-                                    <Check
-                                        className={cn("mr-2 h-4 w-4 text-primary", value === item.name ? "opacity-100" : "opacity-0")} />
-                                    {item.name}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                className="w-[320px] p-0 shadow-xl rounded-xl"
+                align="start"
+                sideOffset={6}
+            >
+                {/* Sticky search */}
+                <div className="flex items-center border-b px-3 sticky top-0 bg-popover z-10">
+                    <input
+                        ref={inputRef}
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={e => e.stopPropagation()}
+                        placeholder="Search..."
+                        className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                </div>
+                {filteredItems.length === 0 && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                        No results found.
+                    </div>
+                )}
+                {filteredItems.map((item, index) => (
+                    <DropdownMenuItem
+                        key={item.code || `${item.name}-${index}`}
+                        onSelect={() => { onChange(item.name); setOpen(false); setQuery(""); }}
+                        className={cn(
+                            "cursor-pointer px-3 py-2",
+                            value === item.name && "bg-accent/50 font-medium"
+                        )}
+                    >
+                        <Check className={cn(
+                            "mr-2 h-4 w-4 text-primary shrink-0",
+                            value === item.name ? "opacity-100" : "opacity-0"
+                        )} />
+                        {item.name}
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 
@@ -220,12 +310,22 @@ const isWalkInClassification = (
     return name.includes("walk");
 };
 
+const isHouseholdStoreType = (
+    storeTypeId: number | string | null | undefined,
+    options: ReferenceOption[],
+) => {
+    if (!storeTypeId) return false;
+    const match = options.find((o) => String(o.id) === String(storeTypeId));
+    const name = (match?.name || "").toLowerCase();
+    return name.includes("household");
+};
+
 const customerSchema = z.object({
     customer_code: z.string().optional().or(z.literal("")),
     customer_name: z.string().min(1, "Customer name is required"),
-    store_name: z.string().min(1, "Store name is required"),
-    store_signage: z.string(),
-    contact_number: z.string().min(1, "Contact number is required"),
+    store_name: z.string().optional().or(z.literal("")),
+    store_signage: z.string().optional().or(z.literal("")),
+    contact_number: z.string().regex(/^\d{11}$/, "Contact number must be exactly 11 digits"),
     customer_email: z.string().email().or(z.literal("")),
     brgy: z.string().optional().or(z.literal("")),
     city: z.string().optional().or(z.literal("")),
@@ -293,7 +393,7 @@ const getDefaultValues = (): CustomerFormValues => ({
     customer_email: "", brgy: "", city: "", province: "", tel_number: "", customer_tin: "",
     payment_term: 0, store_type: null, classification: null, price_type: "", isActive: 1, isVAT: 0, isEWT: 0,
     discount_type: null, type: "Regular", user_id: null, encoder_id: 1, bank_accounts: [],
-    customer_image: "", location: "", otherDetails: "", status: "Draft",
+    customer_image: "", location: "", otherDetails: "", status: "Active",
 });
 
 // ============================================================================
@@ -379,11 +479,37 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
     const selectedProvince = useWatch({ control: form.control, name: "province" });
     const selectedCity = useWatch({ control: form.control, name: "city" });
     const selectedClassificationId = useWatch({ control: form.control, name: "classification" });
+    const selectedStoreTypeId = useWatch({ control: form.control, name: "store_type" });
     const watchedBankAccounts = useWatch({ control: form.control, name: "bank_accounts" });
 
     const isWalkIn = useMemo(() => {
         return isWalkInClassification(selectedClassificationId, classifications);
     }, [selectedClassificationId, classifications]);
+
+    const isHousehold = useMemo(() => {
+        return isHouseholdStoreType(selectedStoreTypeId, storeTypes);
+    }, [selectedStoreTypeId, storeTypes]);
+
+    const isWalkInOrHousehold = isWalkIn || isHousehold;
+
+    // 🚀 NEW: Link Walk-in/Household with Price Type 'E' and 'Active' status
+    useEffect(() => {
+        if (isWalkInOrHousehold) {
+            form.setValue("price_type", "E", { shouldValidate: true });
+            form.setValue("status", "Active", { shouldValidate: true });
+        }
+    }, [isWalkInOrHousehold, form]);
+
+    // 🚀 NEW: Bidirectional link - if Price Type is 'E', try to auto-select Walk-in
+    const watchedPriceType = useWatch({ control: form.control, name: "price_type" });
+    useEffect(() => {
+        if (watchedPriceType === "E" && !isWalkInOrHousehold) {
+            const walkInClass = classifications.find(c => c.name.toLowerCase().includes("walk"));
+            if (walkInClass) {
+                form.setValue("classification", Number(walkInClass.id), { shouldValidate: true });
+            }
+        }
+    }, [watchedPriceType, isWalkInOrHousehold, classifications, form]);
 
     // ========================================================================
     // 🚀 NEW FEATURE: AUTOMATIC IMAGE UPLOAD
@@ -547,10 +673,10 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
     }, [selectedCity, citiesList]);
 
     useEffect(() => {
-        if (isWalkIn) {
-            form.clearErrors(["customer_tin", "province", "city", "brgy"]);
+        if (isWalkInOrHousehold) {
+            form.clearErrors(["customer_tin", "store_name", "store_signage"]);
         }
-    }, [form, isWalkIn]);
+    }, [form, isWalkInOrHousehold]);
 
     useEffect(() => {
         let isMounted = true;
@@ -682,45 +808,46 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
 
     const handleFormSubmit: SubmitHandler<CustomerFormValues> = async (values) => {
         const walkInSelected = isWalkInClassification(values.classification, classifications);
-        form.clearErrors(["customer_tin", "province", "city", "brgy"]);
+        const householdSelected = isHouseholdStoreType(values.store_type, storeTypes);
+        const walkInOrHousehold = walkInSelected || householdSelected;
+
+        form.clearErrors(["customer_tin", "province", "city", "brgy", "store_name", "store_signage"]);
 
         let hasManualErrors = false;
-        let firstTab: "address" | "billing" | null = null;
+        let firstTab: "address" | "billing" | "basic" | null = null;
 
-        if (!walkInSelected) {
-            if (!values.province || values.province.trim() === "") {
-                form.setError("province", {
-                    type: "manual",
-                    message: "Province is required unless classification is Walk-in.",
-                });
-                firstTab = firstTab || "address";
-                hasManualErrors = true;
-            }
+        if (!values.province || values.province.trim() === "") {
+            form.setError("province", { type: "manual", message: "Province is required." });
+            firstTab = firstTab || "address";
+            hasManualErrors = true;
+        }
 
-            if (!values.city || values.city.trim() === "") {
-                form.setError("city", {
-                    type: "manual",
-                    message: "City is required unless classification is Walk-in.",
-                });
-                firstTab = firstTab || "address";
-                hasManualErrors = true;
-            }
+        if (!values.city || values.city.trim() === "") {
+            form.setError("city", { type: "manual", message: "City is required." });
+            firstTab = firstTab || "address";
+            hasManualErrors = true;
+        }
 
-            if (!values.brgy || values.brgy.trim() === "") {
-                form.setError("brgy", {
-                    type: "manual",
-                    message: "Barangay is required unless classification is Walk-in.",
-                });
-                firstTab = firstTab || "address";
-                hasManualErrors = true;
-            }
+        if (!values.brgy || values.brgy.trim() === "") {
+            form.setError("brgy", { type: "manual", message: "Barangay is required." });
+            firstTab = firstTab || "address";
+            hasManualErrors = true;
+        }
 
+        if (!walkInOrHousehold) {
             if (!values.customer_tin || values.customer_tin.trim() === "") {
-                form.setError("customer_tin", {
-                    type: "manual",
-                    message: "TIN is required unless classification is Walk-in.",
-                });
+                form.setError("customer_tin", { type: "manual", message: "TIN is required for business accounts." });
                 firstTab = firstTab || "billing";
+                hasManualErrors = true;
+            }
+            if (!values.store_name || values.store_name.trim() === "") {
+                form.setError("store_name", { type: "manual", message: "Store Name is required for business accounts." });
+                firstTab = firstTab || "basic";
+                hasManualErrors = true;
+            }
+            if (!values.store_signage || values.store_signage.trim() === "") {
+                form.setError("store_signage", { type: "manual", message: "Store Signage is required for business accounts." });
+                firstTab = firstTab || "basic";
                 hasManualErrors = true;
             }
         }
@@ -729,6 +856,23 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
             if (firstTab) setActiveTab(firstTab);
             toast.error("Please complete the required fields before saving.");
             return;
+        }
+
+        if (walkInOrHousehold) {
+            const fullName = values.customer_name;
+            const brgy = values.brgy || "";
+            const city = values.city || "";
+            const generatedName = `${fullName}, ${brgy}, ${city}`.replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',');
+            
+            values.store_name = generatedName;
+            values.store_signage = generatedName;
+            values.price_type = "E";
+            values.status = "Active";
+
+            const walkInClass = classifications.find(c => c.name.toLowerCase().includes("walk"));
+            if (walkInClass) {
+                values.classification = walkInClass.id as number;
+            }
         }
 
         try {
@@ -904,7 +1048,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                 </TabsList>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
+                            <div className="flex-1  overflow-y-auto custom-scrollbar p-6 md:p-8">
 
                                 <TabsContent value="basic"
                                     className="space-y-6 m-0 animate-in fade-in slide-in-from-bottom-2">
@@ -936,19 +1080,21 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                         placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>
                                             )} />
 
-                                        <FormField control={form.control} name="store_type" render={({ field }) => (
+                                        <FormField  control={form.control} name="store_type" render={({ field }) => (
                                             <FormItem className="flex flex-col pt-1.5">
                                                 <FormLabel
                                                     className="font-bold uppercase text-xs text-muted-foreground">
                                                     Store Type
                                                 </FormLabel>
-                                                <CreatableCombobox
+                                                <FieldCombobox
+                                            
                                                     items={storeTypes}
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                     onCreate={handleCreateStoreType}
                                                     placeholder="Select or create..."
-                                                    itemName="Store Type" />
+                                                    itemName="Store Type"
+                                                />
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
@@ -958,11 +1104,14 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                 <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
                                                     Classification
                                                 </FormLabel>
-                                                <CreatableCombobox
+                                                <FieldCombobox
                                                     items={classifications}
-                                                    value={field.value} onChange={field.onChange}
-                                                    onCreate={handleCreateClassification} placeholder="Select or create..."
-                                                    itemName="Classification" />
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                    onCreate={handleCreateClassification}
+                                                    placeholder="Select or create..."
+                                                    itemName="Classification"
+                                                />
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
@@ -973,7 +1122,7 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                     className="font-bold uppercase text-xs text-muted-foreground">
                                                     Profile Status
                                                 </FormLabel>
-                                                <CreatableCombobox
+                                                <FieldCombobox
                                                     items={statuses}
                                                     value={field.value}
                                                     onChange={field.onChange}
@@ -985,18 +1134,22 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                             </FormItem>
                                         )} />
 
-                                        <FormField control={form.control} name="store_name" render={({ field }) => (
-                                            <FormItem><FormLabel
-                                                className="font-bold uppercase text-xs text-muted-foreground">Store
-                                                Name</FormLabel><FormControl><Input className="h-11 bg-muted/30"
-                                                    placeholder="Main Branch" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="store_signage" render={({ field }) => (
-                                            <FormItem><FormLabel
-                                                className="font-bold uppercase text-xs text-muted-foreground">Store
-                                                Signage</FormLabel><FormControl><Input className="h-11 bg-muted/30"
-                                                    placeholder="Doe's General Store" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )} />
+                                        {!isWalkInOrHousehold && (
+                                            <>
+                                                <FormField control={form.control} name="store_name" render={({ field }) => (
+                                                    <FormItem><FormLabel
+                                                        className="font-bold uppercase text-xs text-muted-foreground">Store
+                                                        Name</FormLabel><FormControl><Input className="h-11 bg-muted/30"
+                                                            placeholder="Main Branch" {...field} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                                <FormField control={form.control} name="store_signage" render={({ field }) => (
+                                                    <FormItem><FormLabel
+                                                        className="font-bold uppercase text-xs text-muted-foreground">Store
+                                                        Signage</FormLabel><FormControl><Input className="h-11 bg-muted/30"
+                                                            placeholder="Doe's General Store" {...field} /></FormControl><FormMessage /></FormItem>
+                                                )} />
+                                            </>
+                                        )}
 
                                         {/* 🚀 FIXED: Interactive Image Upload & Preview */}
                                         <FormField control={form.control} name="customer_image" render={({ field }) => (
@@ -1183,39 +1336,25 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                     <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
                                                         Payment Term
                                                     </FormLabel>
-
-                                                    <Select
-                                                        disabled={isLoadingPaymentTerms}
-                                                        onValueChange={(val) => field.onChange(Number(val))}
-                                                        value={field.value ? String(field.value) : ""}
-                                                    >
-                                                        <FormControl>
-                                                            <SelectTrigger className="h-11 bg-muted/30">
-                                                                <SelectValue
-                                                                    placeholder={
-                                                                        isLoadingPaymentTerms
-                                                                            ? "Loading terms..."
-                                                                            : "Select payment term"
-                                                                    }
-                                                                />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-
-                                                        <SelectContent>
-                                                            {paymentTerms.map((term) => (
-                                                                <SelectItem key={term.id} value={String(term.id)}>
-                                                                    {term.payment_name}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-
+                                                    <FormControl>
+                                                        <SearchableSelect
+                                                            options={paymentTerms.map(t => ({
+                                                                value: String(t.id),
+                                                                label: t.payment_name,
+                                                            }))}
+                                                            value={field.value ? String(field.value) : ""}
+                                                            onValueChange={(val) => field.onChange(Number(val))}
+                                                            placeholder={isLoadingPaymentTerms ? "Loading terms..." : "Select payment term"}
+                                                            disabled={isLoadingPaymentTerms}
+                                                            className="h-11 bg-muted/30"
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
 
-                                        {/* PRICE TYPE (CONTROLLED) */}
+                                        {/* PRICE TYPE (HARD-CODED TO INPUT) */}
                                         <FormField
                                             control={form.control}
                                             name="price_type"
@@ -1225,32 +1364,20 @@ export function CustomerFormSheet({ open, onOpenChange, customer, onSubmit, defa
                                                     <FormLabel className="font-bold uppercase text-xs text-muted-foreground">
                                                         Price Type
                                                     </FormLabel>
-
-                                                    <Select
-                                                        onValueChange={field.onChange}
-                                                        value={field.value || ""}
-                                                        // disabled={isWalkIn} // optional rule
-                                                    >
-                                                        <FormControl>
-                                                            <SelectTrigger className="h-11 bg-muted/30">
-                                                                <SelectValue placeholder="Select price type" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-
-                                                        <SelectContent>
-                                                            <SelectItem value="A">Price Type A</SelectItem>
-                                                            <SelectItem value="B">Price Type B</SelectItem>
-                                                            <SelectItem value="Retail">Retail</SelectItem>
-                                                            <SelectItem value="Wholesale">Wholesale</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-
-                                                    {/* {isWalkIn && (
-                                                        <p className="text-[11px] text-amber-600 mt-1 font-semibold">
-                                                            Walk-in customers typically do not require a pricing tier.
+                                                    <FormControl>
+                                                        <Input 
+                                                            className="h-11 bg-muted/30 uppercase font-bold" 
+                                                            placeholder="e.g., E, A, B" 
+                                                            {...field}
+                                                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                                                            // disabled={isWalkInOrHousehold}
+                                                        />
+                                                    </FormControl>
+                                                    {/* {isWalkInOrHousehold && (
+                                                        <p className="text-[10px] text-primary mt-1 font-bold uppercase tracking-tight">
+                                                            ⚡ Price Type 'E' is mandatory for Walk-in / Household.
                                                         </p>
                                                     )} */}
-
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
