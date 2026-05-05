@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Package, Building2 } from "lucide-react";
+import { addYears, format } from "date-fns";
 
 interface SerialRow {
   id: string; // local key only
@@ -183,6 +184,26 @@ export function CylinderAssetsForm({
   const updateRow = <K extends keyof SerialRow>(rowId: string, field: K, value: SerialRow[K]) =>
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
 
+  const handleQuickExpire = (rowId: string, years: number) => {
+    const newDate = format(addYears(new Date(), years), "yyyy-MM-dd");
+    updateRow(rowId, "expiration_date", newDate);
+  };
+
+  const handleQuickExpireEdit = (years: number) => {
+    const newDate = format(addYears(new Date(), years), "yyyy-MM-dd");
+    setEditData((p) => ({ ...p, expiration_date: newDate }));
+  };
+
+  const handleSetAllExpiration = (years: number) => {
+    const newDate = format(addYears(new Date(), years), "yyyy-MM-dd");
+    setRows((prev) => prev.map((r) => ({ ...r, expiration_date: newDate })));
+  };
+
+  const handleSetAllTare = (weight: string) => {
+    if (!weight) return;
+    setRows((prev) => prev.map((r) => ({ ...r, tare_weight: weight })));
+  };
+
   /* ---- Submit ---- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -303,7 +324,7 @@ export function CylinderAssetsForm({
 
               {/* Table header */}
               <div className="rounded-lg border border-border/60 overflow-hidden">
-                <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_0.8fr_auto] gap-0 bg-muted/40 border-b border-border/60 px-3 py-2">
+                <div className="grid grid-cols-[1.5fr_1fr_1fr_1.8fr_0.8fr_auto] gap-0 bg-muted/40 border-b border-border/60 px-3 py-2">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Serial Number
                   </span>
@@ -313,8 +334,30 @@ export function CylinderAssetsForm({
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Condition
                   </span>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     Expiration
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSetAllExpiration(5)}
+                        className="h-5 w-8 text-[8px] font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-md"
+                        title="Set all to 5 Years"
+                      >
+                        ALL 5Y
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSetAllExpiration(10)}
+                        className="h-5 w-9 text-[8px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded-md"
+                        title="Set all to 10 Years"
+                      >
+                        ALL 10Y
+                      </Button>
+                    </div>
                   </span>
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Tare (kg)
@@ -325,8 +368,8 @@ export function CylinderAssetsForm({
                 <div className="divide-y divide-border/40">
                   {rows.map((row, index) => (
                     <div key={row.id} className="px-3 py-2 hover:bg-muted/10 transition-colors space-y-2">
-                      {/* Main row: serial / status / condition / delete */}
-                      <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_0.8fr_auto] gap-2 items-center">
+                      {/* Main row: serial / status / condition / delete / expiration */}
+                      <div className="grid grid-cols-[1.5fr_1fr_1fr_1.8fr_0.8fr_auto] gap-2 items-center">
                         <Input
                           placeholder={`e.g. CYL-${String(index + 1).padStart(4, "0")}`}
                           value={row.serial_number}
@@ -373,28 +416,66 @@ export function CylinderAssetsForm({
                             ))}
                           </SelectContent>
                         </Select>
-                        <Input
-                          type="date"
-                          value={row.expiration_date}
-                          onChange={(e) => updateRow(row.id, "expiration_date", e.target.value)}
-                          className="h-8 text-xs"
-                          disabled={!productId}
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={row.tare_weight}
-                          onChange={(e) => updateRow(row.id, "tare_weight", e.target.value)}
-                          onBlur={(e) => {
-                            const val = parseFloat(e.target.value);
-                            if (!isNaN(val)) {
-                              updateRow(row.id, "tare_weight", val.toFixed(2));
-                            }
-                          }}
-                          className="h-8 text-xs"
-                          disabled={!productId}
-                        />
+                        <div className="flex items-center gap-1 group">
+                          <Input
+                            type="date"
+                            value={row.expiration_date}
+                            onChange={(e) => updateRow(row.id, "expiration_date", e.target.value)}
+                            className="h-8 text-[11px] px-2 flex-1 min-w-0"
+                            disabled={!productId}
+                          />
+                          <div className="flex gap-0.5 shrink-0">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleQuickExpire(row.id, 5)}
+                              className="h-8 w-8 text-[10px] font-bold bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
+                              title="Set 5 Years"
+                            >
+                              5Y
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleQuickExpire(row.id, 10)}
+                              className="h-8 w-9 text-[10px] font-bold bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+                              title="Set 10 Years"
+                            >
+                              10Y
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={row.tare_weight}
+                            onChange={(e) => updateRow(row.id, "tare_weight", e.target.value)}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val)) {
+                                updateRow(row.id, "tare_weight", val.toFixed(2));
+                              }
+                            }}
+                            className="h-8 text-xs flex-1"
+                            disabled={!productId}
+                          />
+                          {row.tare_weight && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleSetAllTare(row.tare_weight)}
+                              className="h-8 w-8 text-zinc-400 hover:text-blue-600"
+                              title="Copy this weight to all rows"
+                            >
+                              <Plus className="h-3.5 w-3.5 rotate-45" /> 
+                            </Button>
+                          )}
+                        </div>
                         <Button
                           type="button"
                           variant="ghost"
@@ -453,11 +534,34 @@ export function CylinderAssetsForm({
               <div className="p-4 grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Expiration Date</Label>
-                  <Input
-                    type="date"
-                    value={String(editData.expiration_date || "")}
-                    onChange={(e) => setEditData((p) => ({ ...p, expiration_date: e.target.value }))}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={String(editData.expiration_date || "")}
+                      onChange={(e) => setEditData((p) => ({ ...p, expiration_date: e.target.value }))}
+                      className="flex-1"
+                    />
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleQuickExpireEdit(5)}
+                        className="h-10 px-2 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100"
+                      >
+                        +5 Years
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleQuickExpireEdit(10)}
+                        className="h-10 px-2 text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100"
+                      >
+                        +10 Years
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Tare Weight (kg)</Label>
