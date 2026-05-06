@@ -14,22 +14,25 @@ export function useCustomerHistory(customerId?: string) {
       if (customerId) {
         url.searchParams.append("customer_id", customerId);
       }
-      
+
       const response = await fetch(url.toString());
       if (!response.ok) {
         throw new Error("Failed to fetch customer history");
       }
       const result = await response.json();
-      setData(result);
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+      setData(result as CustomerHistoryData[]);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(message);
     } finally {
       setLoading(false);
     }
   }, [customerId]);
 
   useEffect(() => {
-    fetchHistory();
+    const t = setTimeout(() => fetchHistory(), 0);
+    return () => clearTimeout(t);
   }, [fetchHistory]);
 
   return {

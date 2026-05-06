@@ -27,14 +27,22 @@ import { TransactionLedger } from "./components/TransactionLedger";
 // ─── Inner content (needs context) ───────────────────────────────────────────
 
 function CustomerHistoryContent() {
-  const { data, loading, error, refetch, selectedCustomer, setSelectedCustomer } =
-    useCustomerHistoryContext();
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    selectedCustomer,
+    setSelectedCustomer,
+  } = useCustomerHistoryContext();
 
   if (error) {
     return (
       <Alert variant="destructive" className="max-w-2xl">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle className="font-bold tracking-tight">Connection Error</AlertTitle>
+        <AlertTitle className="font-bold tracking-tight">
+          Connection Error
+        </AlertTitle>
         <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
           <span className="text-sm">{error}</span>
           <Button
@@ -55,7 +63,7 @@ function CustomerHistoryContent() {
     <div className="space-y-6">
       {/* TOOLBAR */}
       <Card className="border-border/60 shadow-sm py-3">
-        <CardContent className="px-5 py-2 flex flex-col sm:flex-row sm:items-center gap-4">
+          <CardContent className="px-5 py-2 flex flex-col sm:flex-row sm:items-center gap-4 transition-shadow duration-200 ease-in-out ">
           <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap shrink-0">
             Target Customer:
           </span>
@@ -77,10 +85,12 @@ function CustomerHistoryContent() {
             onClick={() => refetch()}
             disabled={loading}
             className={cn(
-              "shrink-0 shadow-sm font-bold uppercase tracking-widest text-[10px] h-11 px-5 rounded-xl",
+              "shrink-0 shadow-sm font-bold uppercase tracking-widest text-[10px] h-11 px-5 rounded-xl transition-colors duration-200 ease-in-out motion-safe:transform motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-in-out motion-safe:hover:-translate-y-1",
             )}
           >
-            <RefreshCw className={cn("mr-2 h-3.5 w-3.5", loading && "animate-spin")} />
+            <RefreshCw
+              className={cn("mr-2 h-3.5 w-3.5", loading && "animate-spin")}
+            />
             Sync Data
           </Button>
         </CardContent>
@@ -91,16 +101,19 @@ function CustomerHistoryContent() {
         <div className="flex flex-col items-center justify-center h-72 border-2 border-dashed rounded-2xl border-border/50 bg-muted/10 text-center gap-3">
           <UserSearch className="h-12 w-12 text-muted-foreground/30" />
           <div>
-            <p className="text-sm font-bold text-muted-foreground">No Customer Selected</p>
+            <p className="text-sm font-bold text-muted-foreground">
+              No Customer Selected
+            </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Use the dropdown above to select a customer and view their history.
+              Use the dropdown above to select a customer and view their
+              history.
             </p>
           </div>
           {data.length > 0 && (
             <Button
               size="sm"
               variant="secondary"
-              className="mt-2 text-xs"
+              className="mt-2 text-xs transition-colors duration-200 ease-in-out motion-safe:transform motion-safe:transition-transform motion-safe:duration-150 motion-safe:hover:-translate-y-1"
               onClick={() => setSelectedCustomer(data[0])}
             >
               View first customer <ArrowRight className="ml-1.5 h-3 w-3" />
@@ -154,15 +167,17 @@ export default function CustomerHistoryModule() {
               Monitor account health and logistics performance.
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => window.history.back()}
-            className="self-start sm:self-auto text-muted-foreground hover:text-foreground font-semibold"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to Directory
-          </Button>
+          {initialCustomerId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.history.back()}
+              className="self-start sm:self-auto text-muted-foreground hover:text-foreground font-semibold transition-colors duration-200 ease-in-out"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back to Directory
+            </Button>
+          )}
         </div>
 
         <Separator />

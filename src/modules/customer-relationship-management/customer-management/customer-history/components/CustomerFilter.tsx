@@ -86,7 +86,7 @@ export function CustomerSelector({
             placeholder="Search customer by name or ID..."
             className="h-10 text-sm"
           />
-          <CommandList className="max-h-[300px] overflow-y-auto">
+          <CommandList className=" overflow-y-auto">
             <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
               No customers found.
             </CommandEmpty>

@@ -256,11 +256,11 @@ export function CustomerHistoryProvider({
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCustomerId]);
 
   useEffect(() => {
-    fetchCustomers();
+    const t = setTimeout(() => fetchCustomers(), 0);
+    return () => clearTimeout(t);
   }, [fetchCustomers]);
 
   return (

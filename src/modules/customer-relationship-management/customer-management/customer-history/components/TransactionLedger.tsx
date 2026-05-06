@@ -84,7 +84,7 @@ export function TransactionLedger({ transactions, isLoading }: TransactionLedger
               <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center">
                 Status
               </TableHead>
-              <TableHead className="h-10 px-4 w-[50px]"></TableHead>
+              <TableHead className="h-10 px-4 w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -115,8 +115,15 @@ export function TransactionLedger({ transactions, isLoading }: TransactionLedger
               transactions.map((txn) => (
                 <TableRow
                   key={txn.id}
-                  className="group hover:bg-muted/30 transition-colors cursor-pointer"
+                  className="group hover:bg-muted/30 transition-colors duration-200 ease-in-out motion-safe:transform motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-in-out motion-safe:hover:-translate-y-1 cursor-pointer"
                   onClick={() => handleShowDetails(txn)}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleShowDetails(txn);
+                    }
+                  }}
                 >
                   <TableCell className="px-4 py-4 text-xs font-medium text-foreground/80">
                     {new Date(txn.date).toLocaleDateString("en-PH", {
@@ -165,7 +172,14 @@ export function TransactionLedger({ transactions, isLoading }: TransactionLedger
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="sm:max-w-[460px] p-0 gap-0 flex flex-col overflow-hidden">
+        <SheetContent
+          className={cn(
+            "sm:max-w-115 w-2/4 p-0 gap-0 flex flex-col overflow-hidden transform-gpu motion-safe:transition motion-safe:duration-300 motion-safe:ease-out",
+            // slide & fade using transform+opacity to keep it GPU-accelerated
+            isSheetOpen ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0 pointer-events-none",
+          )}
+          style={{ willChange: "transform, opacity", backfaceVisibility: "hidden" }}
+        >
           {selectedTxn && (
             <>
               {/* ── Fixed Header ── */}
@@ -202,9 +216,9 @@ export function TransactionLedger({ transactions, isLoading }: TransactionLedger
               {/* ── Scrollable Body ── */}
               <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 bg-muted/5">
                 {/* Read-only Disclaimer */}
-                <div className="flex items-start gap-2 bg-blue-500/10 text-blue-700 p-3 rounded-lg border border-blue-500/20">
+                <div className="flex gap-2 bg-blue-500/10 text-blue-700 p-3 rounded-lg border border-blue-500/20 items-center">
                   <Eye className="h-4 w-4 mt-0.5 shrink-0" />
-                  <p className="text-[11px] leading-tight">
+                  <p className="text-[11px] leading-tight ">
                     <strong>Read-Only View.</strong> This is a historical ledger entry. You cannot edit master data or process direct payments from this module.
                   </p>
                 </div>

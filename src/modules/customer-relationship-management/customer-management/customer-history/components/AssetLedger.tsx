@@ -68,8 +68,8 @@ export function AssetLedger({ entries, totalDeployed, totalReturned, isLoading }
         <Table>
           <TableHeader className="bg-muted/50 border-b">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-9 px-4 text-xs font-semibold w-[120px]">Reference</TableHead>
-              <TableHead className="h-9 px-4 text-xs font-semibold w-[130px]">Date</TableHead>
+              <TableHead className="h-9 px-4 text-xs font-semibold w-30">Reference</TableHead>
+              <TableHead className="h-9 px-4 text-xs font-semibold w-32.5">Date</TableHead>
               <TableHead className="h-9 px-4 text-xs font-semibold text-center">Deployed</TableHead>
               <TableHead className="h-9 px-4 text-xs font-semibold text-center">Returned</TableHead>
               <TableHead className="h-9 px-4 text-xs font-semibold text-center">Net Movement</TableHead>
