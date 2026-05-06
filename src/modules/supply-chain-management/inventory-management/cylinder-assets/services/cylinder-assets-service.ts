@@ -100,16 +100,18 @@ export const cylinderAssetsService = {
   },
 
   async fetchCustomers(search?: string) {
-    let query = `fields=customer_code,customer_name&filter[isActive][_eq]=1&limit=100&sort=customer_name`;
+    const filterObj: Record<string, unknown> = {
+      isActive: { _eq: 1 }
+    };
+
     if (search) {
-      const filter = {
-        _or: [
-          { customer_code: { _icontains: search } },
-          { customer_name: { _icontains: search } },
-        ],
-      };
-      query += `&filter=${encodeURIComponent(JSON.stringify(filter))}`;
+      filterObj._or = [
+        { customer_code: { _icontains: search } },
+        { customer_name: { _icontains: search } },
+      ];
     }
+
+    const query = `fields=customer_code,customer_name&limit=100&sort=customer_name&filter=${encodeURIComponent(JSON.stringify(filterObj))}`;
     const res = await directusFetch<{ data: { customer_code: string; customer_name: string }[] }>(`${DIRECTUS_URL}/items/customer?${query}`);
     return res.data;
   },
