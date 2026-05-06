@@ -66,13 +66,13 @@ export const CustomerRow = memo(function CustomerRow({
   const statusLabel = String(rawStatus || "Undefined");
   const statusKey = statusLabel.toLowerCase();
   const currentStatusValue = statusKey.includes("active")
-    ? "Active"
+    ? "ACTIVE"
     : statusKey.includes("suspend")
-      ? "Suspended"
-      : statusKey.includes("archiv")
-        ? "Archived"
-        : "Draft";
-  const PROFILE_STATUS_OPTIONS = ["Draft", "Active", "Suspended", "Archived"];
+      ? "SUSPENDED"
+      : statusKey.includes("archive")
+        ? "ARCHIVE"
+        : "DRAFT";
+  const PROFILE_STATUS_OPTIONS = ["DRAFT", "ACTIVE", "SUSPENDED", "ARCHIVE"];
 
   const tierClasses = cn(
     "text-[10px] font-semibold px-2 py-0.5",

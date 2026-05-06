@@ -398,7 +398,7 @@ const customerSchema = z.object({
   isActive: z.coerce.number().default(1),
   isVAT: z.coerce.number().default(0),
   isEWT: z.coerce.number().default(0),
-  status: z.enum(["Draft", "Active", "Suspended", "Archived"]).default("Draft"),
+  status: z.enum(["Draft", "Active", "Suspended", "Archive"]).default("Draft"),
   customer_image: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   otherDetails: z.string().optional().nullable(),
@@ -427,7 +427,7 @@ const PROFILE_STATUS_OPTIONS = [
   { value: "Draft", label: "Draft", description: "Pending Verification" },
   { value: "Active", label: "Active", description: "Fully Verified" },
   { value: "Suspended", label: "Suspended", description: "Account on Hold" },
-  { value: "Archived", label: "Archived", description: "No longer active" },
+  { value: "Archive", label: "Archive", description: "No longer active" },
 ];
 
 const mapStatus = (s?: string | null) => {
@@ -435,7 +435,7 @@ const mapStatus = (s?: string | null) => {
   const lower = s.toLowerCase();
   if (lower.includes("active")) return "Active";
   if (lower.includes("suspend")) return "Suspended";
-  if (lower.includes("archiv")) return "Archived";
+  if (lower.includes("archive")) return "Archive";
   return "Draft";
 };
 
@@ -1045,7 +1045,7 @@ export function CustomerFormSheet({
 
       values.store_name = generatedName;
       values.store_signage = generatedName;
-      
+
       // Removed: aggressive overrides for price_type, status, and classification
       // These should be set via defaults or user selection, not forced here.
     }
@@ -1746,7 +1746,7 @@ export function CustomerFormSheet({
                               onChange={(e) =>
                                 field.onChange(e.target.value.toUpperCase())
                               }
-                              // disabled={isWalkInOrHousehold}
+                            // disabled={isWalkInOrHousehold}
                             />
                           </FormControl>
                           {/* {isWalkInOrHousehold && (

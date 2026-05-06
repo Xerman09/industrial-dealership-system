@@ -349,16 +349,16 @@ export function CustomerTable({
                   All Status
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="Active">
-                  Active Only
+                  Active
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="Suspended">
-                  Suspended Only
+                  Suspended
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="Archived">
-                  Archived Only
+                <DropdownMenuRadioItem value="Archive">
+                  Archive
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="Draft">
-                  Draft Only
+                  Draft 
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
               {isFiltered && (
