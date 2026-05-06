@@ -26,10 +26,7 @@ export function getDirectusBaseUrl() {
 export async function getAuthHeader(): Promise<Record<string, string>> {
   // ✅ Prefer server token if you have it
   const envToken =
-    process.env.DIRECTUS_TOKEN ||
-    process.env.NEXT_PUBLIC_DIRECTUS_TOKEN ||
-    process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN ||
-    "";
+    process.env.DIRECTUS_STATIC_TOKEN;
 
   if (envToken) return { Authorization: `Bearer ${envToken}` };
 

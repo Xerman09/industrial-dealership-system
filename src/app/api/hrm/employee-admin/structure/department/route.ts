@@ -7,7 +7,7 @@ if (!DIRECTUS_URL) {
 const LIMIT = 1000;
 
 async function dFetch(path: string, options?: RequestInit) {
-    const token = process.env.DIRECTUS_STATIC_TOKEN || process.env.DIRECTUS_TOKEN || process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN;
+    const token = process.env.DIRECTUS_STATIC_TOKEN;
     const url = `${DIRECTUS_URL}${path}`;
 
     const res = await fetch(url, {

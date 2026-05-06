@@ -5,8 +5,6 @@ const DIRECTUS_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 export async function GET() {
   try {
     const token = process.env.DIRECTUS_STATIC_TOKEN ||
-      process.env.DIRECTUS_TOKEN ||
-      process.env.NEXT_PUBLIC_DIRECTUS_STATIC_TOKEN ||
       "";
 
     const baseUrl = DIRECTUS_URL?.endsWith('/') ? DIRECTUS_URL.slice(0, -1) : DIRECTUS_URL;
