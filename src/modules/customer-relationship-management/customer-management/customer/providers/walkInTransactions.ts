@@ -1,62 +1,29 @@
-import type {
-  SalesOrderCustomerLite,
-  SalesOrderDetailLite,
-  SalesOrderSummary,
-} from "../types";
-
-interface SalesOrderReportLiteResponse {
-  salesOrders: SalesOrderSummary[];
-  customers: SalesOrderCustomerLite[];
-}
+import type { WalkInTransaction } from "../types";
 
 async function parseError(res: Response): Promise<string> {
-  try {
+    try {
+        const json = await res.json();
+        return json?.error || json?.message || `HTTP ${res.status}`;
+    } catch {
+        return res.statusText || "Request failed";
+    }
+}
+
+/**
+ * Fetches recent walk-in transactions from the dedicated API route.
+ * The route handles the classification lookup + customer code join server-side.
+ */
+export async function fetchWalkInTransactions(): Promise<WalkInTransaction[]> {
+    const res = await fetch(
+        "/api/crm/customer/walk-in-transactions",
+        { cache: "no-store" }
+    );
+
+    if (!res.ok) {
+        const err = await parseError(res);
+        throw new Error(err || `Failed to fetch walk-in transactions (${res.status})`);
+    }
+
     const json = await res.json();
-    return json?.error || json?.message || JSON.stringify(json);
-  } catch {
-    return res.statusText || "Request failed";
-  }
-}
-
-export async function fetchRecentSalesOrders(
-  page = 1,
-  pageSize = 15,
-): Promise<SalesOrderReportLiteResponse> {
-  const params = new URLSearchParams({
-    page: page.toString(),
-    pageSize: pageSize.toString(),
-  });
-
-  const res = await fetch(
-    `/api/crm/customer-hub/sales-order-report?${params.toString()}`,
-    {
-      cache: "no-store",
-    },
-  );
-
-  if (!res.ok) {
-    const err = await parseError(res);
-    throw new Error(err || `Failed to fetch sales orders (${res.status})`);
-  }
-
-  return res.json() as Promise<SalesOrderReportLiteResponse>;
-}
-
-export async function fetchSalesOrderDetails(
-  orderId: number,
-): Promise<SalesOrderDetailLite[]> {
-  const res = await fetch(
-    `/api/crm/customer-hub/sales-order-report?orderId=${orderId}`,
-    {
-      cache: "no-store",
-    },
-  );
-
-  if (!res.ok) {
-    const err = await parseError(res);
-    throw new Error(err || `Failed to fetch order details (${res.status})`);
-  }
-
-  const json = await res.json();
-  return json.data || [];
+    return (json.data ?? []) as WalkInTransaction[];
 }

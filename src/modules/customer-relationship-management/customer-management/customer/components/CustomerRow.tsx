@@ -63,7 +63,7 @@ export const CustomerRow = memo(function CustomerRow({
         profile_status?: string;
       }
     ).status ?? customer.profile_status;
-  const statusLabel = String(rawStatus || "Draft");
+  const statusLabel = String(rawStatus || "Undefined");
   const statusKey = statusLabel.toLowerCase();
   const currentStatusValue = statusKey.includes("active")
     ? "Active"

@@ -28,7 +28,7 @@ export default function CustomerRegistration() {
     statusFilter,
     storeTypeFilter, // 🚀 Extracted new state
     classificationFilter, // 🚀 Extracted new state
-    userMapping,
+   
     setPage,
     setPageSize,
     setSearchQuery,

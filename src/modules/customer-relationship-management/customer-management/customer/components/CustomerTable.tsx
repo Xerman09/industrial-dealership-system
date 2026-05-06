@@ -246,7 +246,8 @@ export function CustomerTable({
   }, [localSearchQuery, onSearchChange, parentSearchQuery]);
 
   useEffect(() => {
-    setLocalSearchQuery(parentSearchQuery);
+    const t = setTimeout(() => setLocalSearchQuery(parentSearchQuery), 0);
+    return () => clearTimeout(t);
   }, [parentSearchQuery]);
 
   const isFiltered =
@@ -280,10 +281,16 @@ export function CustomerTable({
         "classificationMap",
         Array.from(classificationMap.entries()),
       );
-    } catch (e) {
+    } catch {
       /* ignore */
     }
   }, [classificationOptions, classificationMap]);
+
+  useEffect(() => {
+    if (page > totalPages && totalPages > 0 && !isLoading && data.length === 0) {
+      onPageChange(totalPages);
+    }
+  }, [page, totalPages, isLoading, data.length, onPageChange]);
 
   return (
     <div className="space-y-4">
@@ -341,11 +348,17 @@ export function CustomerTable({
                 <DropdownMenuRadioItem value="all">
                   All Status
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="active">
+                <DropdownMenuRadioItem value="Active">
                   Active Only
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="inactive">
-                  Inactive Only
+                <DropdownMenuRadioItem value="Suspended">
+                  Suspended Only
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="Archived">
+                  Archived Only
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="Draft">
+                  Draft Only
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
               {isFiltered && (
@@ -481,7 +494,10 @@ export function CustomerTable({
             <p className="text-sm font-medium">Rows per page</p>
             <Select
               value={`${pageSize}`}
-              onValueChange={(value) => onPageSizeChange(Number(value))}
+              onValueChange={(value) => {
+                onPageSizeChange(Number(value));
+                onPageChange(1);
+              }}
             >
               <SelectTrigger className="h-8 w-17.5">
                 <SelectValue placeholder={pageSize} />
