@@ -14,53 +14,29 @@ const COLLECTIONS = {
   CUSTOMER_CLASSIFICATION: "customer_classification",
 };
 
-type DirectusRecord = Record<string, unknown>;
+// Lightweight types for Directus items used in this route to avoid `any`
+type CustomerItem = Record<string, unknown> & {
+  id?: string | number;
+  location?: unknown;
+  customer_tin?: unknown;
+  classification?: unknown;
+  store_type?: unknown;
+  province?: unknown;
+  city?: unknown;
+  brgy?: unknown;
+  customer_code?: string | null;
+};
 
-interface DirectusResponse<T> {
-  data?: T[];
-  meta?: {
-    filter_count?: number;
-    total_count?: number;
-  };
-}
-
-function getRecordId(record: DirectusRecord, key = "id"): string | null {
-  const value = record[key];
-  if (typeof value === "string" || typeof value === "number")
-    return String(value);
-  return null;
-}
-
-function getRecordString(
-  record: DirectusRecord | undefined,
-  key: string,
-): string | null {
-  if (!record) return null;
-  const value = record[key];
-  if (typeof value === "string" || typeof value === "number")
-    return String(value);
-  return null;
-}
-
-function coerceNumber(value: unknown): number | null {
-  const num =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-        ? Number(value)
-        : NaN;
-  return Number.isFinite(num) ? num : null;
-}
-
-function getPointCoordinates(value: unknown): [number, number] | null {
-  if (!value || typeof value !== "object") return null;
-  const coords = (value as { coordinates?: unknown }).coordinates;
-  if (!Array.isArray(coords) || coords.length < 2) return null;
-  const lon = coerceNumber(coords[0]);
-  const lat = coerceNumber(coords[1]);
-  if (lon === null || lat === null) return null;
-  return [lon, lat];
-}
+type BankAccount = Record<string, unknown> & { customer_id?: string | number };
+type CustomerSalesman = Record<string, unknown> & {
+  customer_id?: string | number;
+  salesman_id?: string | number;
+};
+type Salesman = Record<string, unknown> & {
+  id?: string | number;
+  salesman_name?: string | null;
+  salesman_code?: string | null;
+};
 
 async function fetchWithRetry(
   url: string,
@@ -104,7 +80,10 @@ async function fetchStoreTypeName(
   if (!storeTypeId) return null;
   const res = await fetchWithRetry(
     `${DIRECTUS_URL}/items/store_type/${storeTypeId}`,
-    { cache: "no-store", headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    },
   );
   if (!res.ok) return null;
   const json = await res.json();
@@ -240,11 +219,9 @@ export async function GET(req: NextRequest) {
       params.append("meta", "*");
 
       if (searchQuery) params.append("search", searchQuery);
-      if (statusFilter !== "all")
-        params.append(
-          "filter[isActive][_eq]",
-          statusFilter === "active" ? "1" : "0",
-        );
+      if (statusFilter !== "all") {
+        params.append("filter[status][_eq]", statusFilter.toUpperCase());
+      }
       if (storeTypeFilter !== "all")
         params.append("filter[store_type][_eq]", storeTypeFilter);
       if (classificationFilter !== "all")
@@ -261,19 +238,17 @@ export async function GET(req: NextRequest) {
     });
 
     if (!customersRes.ok) throw new Error(`Directus error fetching customers`);
-    const customersJson =
-      (await customersRes.json()) as DirectusResponse<DirectusRecord>;
-    const customers = Array.isArray(customersJson.data)
-      ? customersJson.data
-      : [];
+    const customersJson = await customersRes.json();
+    const customers: CustomerItem[] =
+      (customersJson.data as CustomerItem[]) || [];
 
     // Fetch relations
     const customerIds = customers
-      .map((customer) => getRecordId(customer))
-      .filter((id): id is string => Boolean(id));
-    let bankAccounts: DirectusRecord[] = [];
-    let customerSalesmen: DirectusRecord[] = [];
-    let salesmen: DirectusRecord[] = [];
+      .map((c) => String(c.id ?? ""))
+      .filter(Boolean);
+    let bankAccounts: BankAccount[] = [];
+    let customerSalesmen: CustomerSalesman[] = [];
+    let salesmen: Salesman[] = [];
 
     if (customerIds.length > 0) {
       const idsQuery = customerIds.join(",");
@@ -289,20 +264,13 @@ export async function GET(req: NextRequest) {
         ),
       ]);
 
-      if (bankRes.ok) {
-        const bankJson =
-          (await bankRes.json()) as DirectusResponse<DirectusRecord>;
-        bankAccounts = Array.isArray(bankJson.data) ? bankJson.data : [];
-      }
+      if (bankRes.ok)
+        bankAccounts = ((await bankRes.json()).data as BankAccount[]) || [];
       if (csRes.ok) {
-        const csJson = (await csRes.json()) as DirectusResponse<DirectusRecord>;
-        customerSalesmen = Array.isArray(csJson.data) ? csJson.data : [];
+        customerSalesmen =
+          ((await csRes.json()).data as CustomerSalesman[]) || [];
         const salesmanIds = Array.from(
-          new Set(
-            customerSalesmen
-              .map((cs) => getRecordId(cs, "salesman_id"))
-              .filter((id): id is string => Boolean(id)),
-          ),
+          new Set(customerSalesmen.map((cs) => cs.salesman_id).filter(Boolean)),
         );
 
         if (salesmanIds.length > 0) {
@@ -310,49 +278,55 @@ export async function GET(req: NextRequest) {
             `${DIRECTUS_URL}/items/${COLLECTIONS.SALESMAN}?filter[id][_in]=${salesmanIds.join(",")}`,
             { cache: "no-store", headers },
           );
-          if (salesmanRes.ok) {
-            const salesJson =
-              (await salesmanRes.json()) as DirectusResponse<DirectusRecord>;
-            salesmen = Array.isArray(salesJson.data) ? salesJson.data : [];
-          }
+          if (salesmanRes.ok)
+            salesmen = ((await salesmanRes.json()).data as Salesman[]) || [];
         }
       }
     }
 
     const enrichedCustomers = customers.map((customer) => {
-      const customerId = getRecordId(customer);
       const myBanks = bankAccounts.filter(
-        (acc) => getRecordId(acc, "customer_id") === customerId,
+        (acc) => String(acc.customer_id) === String(customer.id),
       );
       const mySalesmenLinks = customerSalesmen.filter(
-        (cs) => getRecordId(cs, "customer_id") === customerId,
+        (cs) => String(cs.customer_id) === String(customer.id),
       );
-      const firstLink = mySalesmenLinks[0];
+      const firstLink = mySalesmenLinks[0] as CustomerSalesman | undefined;
 
       let mappedSalesmanName = "N/A";
-      let mappedSalesmanCode = null;
+      let mappedSalesmanCode: string | null = null;
 
-      const linkSalesmanId = firstLink
-        ? getRecordId(firstLink, "salesman_id")
-        : null;
-      if (linkSalesmanId) {
+      if (firstLink) {
         const salesmanData = salesmen.find(
-          (salesman) => getRecordId(salesman) === linkSalesmanId,
+          (s) => String(s.id) === String(firstLink.salesman_id),
         );
-        const salesmanName = getRecordString(salesmanData, "salesman_name");
-        const salesmanCode = getRecordString(salesmanData, "salesman_code");
-        if (salesmanName) {
-          mappedSalesmanName = salesmanName || "Unknown Salesman";
+        if (salesmanData) {
+          mappedSalesmanName = String(
+            salesmanData.salesman_name ?? "Unknown Salesman",
+          );
+          mappedSalesmanCode = salesmanData.salesman_code
+            ? String(salesmanData.salesman_code)
+            : null;
         }
-        mappedSalesmanCode = salesmanCode ? String(salesmanCode) : null;
       }
 
-      const locationValue = customer.location;
-      let mappedLocation: unknown = locationValue;
-      const coords = getPointCoordinates(locationValue);
-      if (coords) {
-        const [lon, lat] = coords;
-        mappedLocation = `${lat}, ${lon}`;
+      let mappedLocation: unknown = customer.location;
+      if (
+        mappedLocation &&
+        typeof mappedLocation === "object" &&
+        "coordinates" in mappedLocation
+      ) {
+        const coordsCandidate = (mappedLocation as Record<string, unknown>)
+          .coordinates;
+        if (
+          Array.isArray(coordsCandidate) &&
+          coordsCandidate.length >= 2 &&
+          typeof coordsCandidate[0] === "number" &&
+          typeof coordsCandidate[1] === "number"
+        ) {
+          const coords = coordsCandidate as number[];
+          mappedLocation = `${coords[1]}, ${coords[0]}`;
+        }
       }
 
       return {
@@ -401,13 +375,15 @@ export async function POST(req: NextRequest) {
     const newCustomerData = { ...body };
     delete newCustomerData.bank_accounts;
 
-    if (
-      newCustomerData.status === undefined &&
-      newCustomerData.profile_status !== undefined
-    ) {
+    if (newCustomerData.status !== undefined) {
+      newCustomerData.status = String(newCustomerData.status).toUpperCase();
+      newCustomerData.profile_status = newCustomerData.status;
+    } else if (newCustomerData.profile_status !== undefined) {
+      newCustomerData.profile_status = String(
+        newCustomerData.profile_status,
+      ).toUpperCase();
       newCustomerData.status = newCustomerData.profile_status;
     }
-    delete newCustomerData.profile_status;
 
     if (newCustomerData.location !== undefined) {
       const geoJson = parseGeometry(String(newCustomerData.location || ""));
@@ -435,9 +411,7 @@ export async function POST(req: NextRequest) {
       !String(newCustomerData.brgy ?? "").trim()
     ) {
       return NextResponse.json(
-        {
-          error: "Delivery address is required",
-        },
+        { error: "Delivery address is required" },
         { status: 400 },
       );
     }
@@ -470,7 +444,9 @@ export async function POST(req: NextRequest) {
     const createJson = await createRes.json();
     const newId = createJson.data.id;
 
-    const generatedCode = isWalkIn ? `WALK-IN-${String(newId).padStart(8, "0")}` : `MAIN-${String(newId).padStart(4, "0")}`;
+    const generatedCode = isWalkIn
+      ? `WALK-IN-${String(newId).padStart(8, "0")}`
+      : `MAIN-${String(newId).padStart(4, "0")}`;
     const patchRes = await fetchWithRetry(
       `${DIRECTUS_URL}/items/${COLLECTIONS.CUSTOMER}/${newId}`,
       {
@@ -482,9 +458,11 @@ export async function POST(req: NextRequest) {
     if (!patchRes.ok) return NextResponse.json(createJson.data);
     return NextResponse.json((await patchRes.json()).data);
   } catch (error) {
-    console.error("Customer create error:", error);
     return NextResponse.json(
-      { error: "Failed to create customer" },
+      {
+        error: "Failed to create customer",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 },
     );
   }
@@ -507,13 +485,15 @@ export async function PATCH(req: NextRequest) {
         { status: 400 },
       );
 
-    if (
-      updateData.status === undefined &&
-      updateData.profile_status !== undefined
-    ) {
+    if (updateData.status !== undefined) {
+      updateData.status = String(updateData.status).toUpperCase();
+      updateData.profile_status = updateData.status;
+    } else if (updateData.profile_status !== undefined) {
+      updateData.profile_status = String(
+        updateData.profile_status,
+      ).toUpperCase();
       updateData.status = updateData.profile_status;
     }
-    delete updateData.profile_status;
 
     if (!updateData.customer_code || updateData.customer_code.trim() === "")
       delete updateData.customer_code;
@@ -537,7 +517,10 @@ export async function PATCH(req: NextRequest) {
       const classificationId =
         updateData.classification ?? existing?.classification ?? null;
       const storeTypeId = updateData.store_type ?? existing?.store_type ?? null;
-      const isWalkInClass = await isWalkInClassification(classificationId, token);
+      const isWalkInClass = await isWalkInClassification(
+        classificationId,
+        token,
+      );
       const isHouseholdStore = await isHouseholdStoreType(storeTypeId, token);
       const isWalkIn = isWalkInClass || isHouseholdStore;
       const resolvedTin =
@@ -573,9 +556,11 @@ export async function PATCH(req: NextRequest) {
     if (!res.ok) throw new Error(`Directus customer update failed`);
     return NextResponse.json((await res.json()).data);
   } catch (error) {
-    console.error("Customer update error:", error);
     return NextResponse.json(
-      { error: "Failed to update customer" },
+      {
+        error: "Failed to update customer",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 },
     );
   }
@@ -597,9 +582,11 @@ export async function DELETE(req: NextRequest) {
     if (!res.ok) throw new Error(`Failed to delete customer`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Customer delete error:", error);
     return NextResponse.json(
-      { error: "Failed to delete customer" },
+      {
+        error: "Failed to delete customer",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 },
     );
   }
