@@ -81,7 +81,12 @@ export function useCylinderAssets() {
       await refresh();
       return result.data;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create asset");
+      const errorMessage = err instanceof Error ? err.message : "Failed to create asset";
+      if (errorMessage.toLowerCase().includes("duplicate") || errorMessage.toLowerCase().includes("unique")) {
+        toast.error("The serial is already added");
+      } else {
+        toast.error(errorMessage);
+      }
       throw err;
     }
   };
@@ -100,7 +105,12 @@ export function useCylinderAssets() {
       await refresh();
       return result.data;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to register assets");
+      const errorMessage = err instanceof Error ? err.message : "Failed to register assets";
+      if (errorMessage.toLowerCase().includes("duplicate") || errorMessage.toLowerCase().includes("unique")) {
+        toast.error("The serial is already added");
+      } else {
+        toast.error(errorMessage);
+      }
       throw err;
     }
   };
