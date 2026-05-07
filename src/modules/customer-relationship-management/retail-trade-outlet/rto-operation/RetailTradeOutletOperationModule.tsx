@@ -68,7 +68,7 @@ function FilterButton({
   );
 }
 
-export default function RetailTradeOutletOperation() {
+export default function RetailTradeOutletOperationModule() {
   const {
     dealers,
     totalCount,
