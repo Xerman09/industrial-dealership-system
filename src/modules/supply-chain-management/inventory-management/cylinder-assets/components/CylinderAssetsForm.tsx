@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Package, Building2 } from "lucide-react";
 import { addYears, format } from "date-fns";
+import { toast } from "sonner";
 
 interface SerialRow {
   id: string; // local key only
@@ -91,6 +92,8 @@ export function CylinderAssetsForm({
 
   // Edit mode single asset state
   const [editData, setEditData] = useState<Partial<Omit<CylinderAsset, 'tare_weight'>> & { tare_weight?: string | number | null }>({});
+
+  const [apiDuplicateSerials, setApiDuplicateSerials] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -184,24 +187,9 @@ export function CylinderAssetsForm({
   const updateRow = <K extends keyof SerialRow>(rowId: string, field: K, value: SerialRow[K]) =>
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
 
-  const handleQuickExpire = (rowId: string, years: number) => {
-    const newDate = format(addYears(new Date(), years), "yyyy-MM-dd");
-    updateRow(rowId, "expiration_date", newDate);
-  };
-
   const handleQuickExpireEdit = (years: number) => {
     const newDate = format(addYears(new Date(), years), "yyyy-MM-dd");
     setEditData((p) => ({ ...p, expiration_date: newDate }));
-  };
-
-  const handleSetAllExpiration = (years: number) => {
-    const newDate = format(addYears(new Date(), years), "yyyy-MM-dd");
-    setRows((prev) => prev.map((r) => ({ ...r, expiration_date: newDate })));
-  };
-
-  const handleSetAllTare = (weight: string) => {
-    if (!weight) return;
-    setRows((prev) => prev.map((r) => ({ ...r, tare_weight: weight })));
   };
 
   /* ---- Submit ---- */
@@ -209,6 +197,7 @@ export function CylinderAssetsForm({
     e.preventDefault();
     if (!productId) return;
     setLoading(true);
+    setApiDuplicateSerials([]);
     try {
       if (id) {
         // Edit: single update
@@ -224,8 +213,32 @@ export function CylinderAssetsForm({
         } as Partial<CylinderAsset>);
       } else {
         // Bulk create
-        const payloads = rows
-          .filter((r) => r.serial_number.trim() !== "")
+        const activeRows = rows.filter((r) => r.serial_number.trim() !== "");
+        if (activeRows.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        const hasEmptyFields = activeRows.some((r) => !r.expiration_date || !r.tare_weight || isNaN(Number(r.tare_weight)));
+        if (hasEmptyFields) {
+          toast.error("Please fill in the expiration date and tare weight for all entered serial numbers.");
+          setLoading(false);
+          return;
+        }
+
+        const serialsToCheck = activeRows.map(r => r.serial_number.trim()).join(",");
+        const validateRes = await fetch(`/api/scm/inventory-management/cylinder-assets?serials=${encodeURIComponent(serialsToCheck)}&limit=100`);
+        const validateJson = await validateRes.json();
+        
+        if (validateJson.data && validateJson.data.length > 0) {
+          const duplicated = validateJson.data.map((a: { serial_number: string }) => a.serial_number);
+          setApiDuplicateSerials(duplicated);
+          toast.error(`Found ${duplicated.length} already registered serial(s). Please check the highlighted rows.`);
+          setLoading(false);
+          return;
+        }
+
+        const payloads = activeRows
           .map((r) => ({
             product_id: Number(productId),
             current_branch_id: branchId ? Number(branchId) : null,
@@ -243,7 +256,16 @@ export function CylinderAssetsForm({
       }
       onSuccess();
     } catch (err) {
-      console.error(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("[DUPLICATE_VALUE:")) {
+        const match = msg.match(/\[DUPLICATE_VALUE:(.+)\]/);
+        if (match && match[1]) {
+           setApiDuplicateSerials([match[1]]);
+        }
+      }
+      if (!msg.toLowerCase().includes("unique") && !msg.toLowerCase().includes("duplicate")) {
+        console.error(err);
+      }
     } finally {
       setLoading(false);
     }
@@ -336,28 +358,6 @@ export function CylinderAssetsForm({
                   </span>
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     Expiration
-                    <div className="flex gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleSetAllExpiration(5)}
-                        className="h-5 w-8 text-[8px] font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-md"
-                        title="Set all to 5 Years"
-                      >
-                        ALL 5Y
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleSetAllExpiration(10)}
-                        className="h-5 w-9 text-[8px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 rounded-md"
-                        title="Set all to 10 Years"
-                      >
-                        ALL 10Y
-                      </Button>
-                    </div>
                   </span>
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Tare (kg)
@@ -366,7 +366,11 @@ export function CylinderAssetsForm({
                 </div>
 
                 <div className="divide-y divide-border/40">
-                  {rows.map((row, index) => (
+                  {rows.map((row, index) => {
+                    const isDuplicated = (row.serial_number.trim() !== "" && 
+                      rows.filter(r => r.serial_number.trim().toLowerCase() === row.serial_number.trim().toLowerCase()).length > 1) ||
+                      (apiDuplicateSerials.includes(row.serial_number.trim()));
+                    return (
                     <div key={row.id} className="px-3 py-2 hover:bg-muted/10 transition-colors space-y-2">
                       {/* Main row: serial / status / condition / delete / expiration */}
                       <div className="grid grid-cols-[1.5fr_1fr_1fr_1.8fr_0.8fr_auto] gap-2 items-center">
@@ -374,7 +378,7 @@ export function CylinderAssetsForm({
                           placeholder={`e.g. CYL-${String(index + 1).padStart(4, "0")}`}
                           value={row.serial_number}
                           onChange={(e) => updateRow(row.id, "serial_number", e.target.value)}
-                          className="h-8 text-sm font-mono"
+                          className={`h-8 text-sm font-mono ${isDuplicated ? 'border-red-500 bg-red-50/50 text-red-900 focus-visible:ring-red-500 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200' : ''}`}
                           disabled={!productId}
                         />
                         <Select
@@ -424,28 +428,6 @@ export function CylinderAssetsForm({
                             className="h-8 text-[11px] px-2 flex-1 min-w-0"
                             disabled={!productId}
                           />
-                          <div className="flex gap-0.5 shrink-0">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleQuickExpire(row.id, 5)}
-                              className="h-8 w-8 text-[10px] font-bold bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
-                              title="Set 5 Years"
-                            >
-                              5Y
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleQuickExpire(row.id, 10)}
-                              className="h-8 w-9 text-[10px] font-bold bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all"
-                              title="Set 10 Years"
-                            >
-                              10Y
-                            </Button>
-                          </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <Input
@@ -463,18 +445,6 @@ export function CylinderAssetsForm({
                             className="h-8 text-xs flex-1"
                             disabled={!productId}
                           />
-                          {row.tare_weight && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleSetAllTare(row.tare_weight)}
-                              className="h-8 w-8 text-zinc-400 hover:text-blue-600"
-                              title="Copy this weight to all rows"
-                            >
-                              <Plus className="h-3.5 w-3.5 rotate-45" /> 
-                            </Button>
-                          )}
                         </div>
                         <Button
                           type="button"
@@ -502,7 +472,8 @@ export function CylinderAssetsForm({
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

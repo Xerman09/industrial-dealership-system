@@ -56,11 +56,15 @@ export async function directusFetch<T = unknown>(
   });
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
-    const errors = json?.errors as Array<{ message: string }> | undefined;
-    const msg =
+    const errors = json?.errors as Array<{ message: string, extensions?: { code?: string, invalid?: string } }> | undefined;
+    let msg =
       errors?.[0]?.message ||
       (json?.error as string) ||
       `Directus responded ${res.status} ${res.statusText}`;
+      
+    if (errors?.[0]?.extensions?.code === "RECORD_NOT_UNIQUE" && errors?.[0]?.extensions?.invalid) {
+      msg = `${msg} [DUPLICATE_VALUE:${errors[0].extensions.invalid}]`;
+    }
     throw new Error(msg);
   }
   return json as T;

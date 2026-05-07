@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import Barcode from "react-barcode";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useReactToPrint } from "react-to-print";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -197,7 +198,7 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
     filters.condition !== undefined;
 
   return (
-    <div className="flex flex-col gap-4 p-4 h-full overflow-hidden">
+    <div className="flex flex-col gap-4 p-4 min-h-full">
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div>
@@ -320,40 +321,32 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
                   </Select>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 w-[180px]">
                   <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest ml-0.5 opacity-70">Branch</Label>
-                  <Select
+                  <SearchableSelect
+                    options={[
+                      { value: "ALL", label: "All Branches" },
+                      ...branches.map(b => ({ value: String(b.id), label: b.name }))
+                    ]}
                     value={filters.branchId ? String(filters.branchId) : "ALL"}
                     onValueChange={(val) => filters.setBranchId(val === "ALL" ? undefined : Number(val))}
-                  >
-                    <SelectTrigger className="h-10 w-[180px] bg-background border-none shadow-sm ring-1 ring-border/50">
-                      <SelectValue placeholder="All Branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All Branches</SelectItem>
-                      {branches.map(b => (
-                        <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="All Branches"
+                    className="h-10 bg-background border-none shadow-sm ring-1 ring-border/50"
+                  />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 w-[220px]">
                   <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest ml-0.5 opacity-70">Product</Label>
-                  <Select
+                  <SearchableSelect
+                    options={[
+                      { value: "ALL", label: "All Products" },
+                      ...products.map(p => ({ value: String(p.id), label: p.name }))
+                    ]}
                     value={filters.productId ? String(filters.productId) : "ALL"}
                     onValueChange={(val) => filters.setProductId(val === "ALL" ? undefined : Number(val))}
-                  >
-                    <SelectTrigger className="h-10 w-[220px] bg-background border-none shadow-sm ring-1 ring-border/50">
-                      <SelectValue placeholder="All Products" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All Products</SelectItem>
-                      {products.map(p => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="All Products"
+                    className="h-10 bg-background border-none shadow-sm ring-1 ring-border/50"
+                  />
                 </div>
 
                 <Button 
@@ -484,13 +477,16 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
                   <div className="flex items-center text-[11px] uppercase tracking-wider h-full">Exp. {renderSortIcon("expiration_date")}</div>
                 </TableHead>
                 <TableHead className="w-[8%] font-bold text-foreground text-right cursor-pointer h-12 py-0" onClick={() => sorting.toggleSort("tare_weight")}>
-                  <div className="flex items-center justify-end text-[11px] uppercase tracking-wider h-full">Tare {renderSortIcon("tare_weight")}</div>
+                  <div className="flex items-center justify-end text-[11px] uppercase tracking-wider h-full">Tare (KG) {renderSortIcon("tare_weight")}</div>
                 </TableHead>
                 <TableHead className="w-[12%] font-bold text-foreground cursor-pointer h-12 py-0" onClick={() => sorting.toggleSort("current_branch_id")}>
                   <div className="flex items-center text-[11px] uppercase tracking-wider h-full">Branch {renderSortIcon("current_branch_id")}</div>
                 </TableHead>
                 <TableHead className="w-[12%] font-bold text-foreground cursor-pointer h-12 py-0" onClick={() => sorting.toggleSort("current_customer_code")}>
                   <div className="flex items-center text-[11px] uppercase tracking-wider h-full">Customer {renderSortIcon("current_customer_code")}</div>
+                </TableHead>
+                <TableHead className="w-[10%] font-bold text-foreground cursor-pointer h-12 py-0" onClick={() => sorting.toggleSort("created_by")}>
+                  <div className="flex items-center text-[11px] uppercase tracking-wider h-full">Created By {renderSortIcon("created_by")}</div>
                 </TableHead>
                 <TableHead className="w-[80px] text-right font-bold text-foreground pr-6 h-12 py-0 text-[11px] uppercase tracking-wider">
                   <div className="flex items-center justify-end h-full">Actions</div>
@@ -544,7 +540,7 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
                               item.cylinder_status === 'WITH_CUSTOMER' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 
                               'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'}`}
                         >
-                          {item.cylinder_status}
+                          {item.cylinder_status.replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>
                       <TableCell className="w-[10%]">
@@ -554,7 +550,7 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
                             ${item.cylinder_condition === 'GOOD' ? 'border-emerald-200 text-emerald-700 bg-emerald-50/50 dark:border-emerald-800 dark:text-emerald-400 dark:bg-emerald-900/20' : 
                               'border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/20'}`}
                         >
-                          {item.cylinder_condition}
+                          {item.cylinder_condition.replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>
                       <TableCell className="w-[12%] text-xs font-medium whitespace-nowrap">
@@ -578,11 +574,16 @@ export function CylinderAssetsList({ data, onCreate, onEdit, onDelete, filters, 
                       </TableCell>
                       <TableCell className="w-[8%] text-xs font-mono text-right font-medium tabular-nums">
                         {item.tare_weight !== null && !isNaN(Number(item.tare_weight)) 
-                          ? Number(item.tare_weight).toFixed(2) 
+                          ? `${Number(item.tare_weight).toFixed(2)} (KG)` 
                           : "—"}
                       </TableCell>
                       <TableCell className="w-[12%] text-muted-foreground truncate">{item.branch?.branch_name || "N/A"}</TableCell>
                       <TableCell className="w-[12%] text-muted-foreground truncate">{item.customer?.customer_name || item.current_customer_code || "N/A"}</TableCell>
+                      <TableCell className="w-[10%] text-muted-foreground text-xs truncate">
+                        {item.created_by && typeof item.created_by === 'object' 
+                          ? `${item.created_by.user_fname} ${item.created_by.user_lname}` 
+                          : "—"}
+                      </TableCell>
                       <TableCell className="w-[80px] text-right space-x-1 pr-6">
                         <Button 
                           variant="ghost" 

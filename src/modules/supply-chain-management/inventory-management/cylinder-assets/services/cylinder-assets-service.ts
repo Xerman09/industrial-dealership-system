@@ -4,13 +4,13 @@ import { CylinderAsset } from "../types";
 const DIRECTUS_URL = getDirectusBase();
 
 export const cylinderAssetsService = {
-  async fetchAll(params?: { search?: string; status?: string; branchId?: number; productId?: number; condition?: string; page?: number; limit?: number; sort?: string }) {
+  async fetchAll(params?: { search?: string; status?: string; branchId?: number; productId?: number; condition?: string; page?: number; limit?: number; sort?: string; serials?: string }) {
     const page = params?.page || 1;
     const limit = params?.limit || 10;
     const offset = (page - 1) * limit;
     const sort = params?.sort || "-id";
 
-    let query = `fields=id,product_id,serial_number,cylinder_status,cylinder_condition,current_branch_id,current_customer_code,acquisition_date,expiration_date,tare_weight,cost,remarks,created_date&sort=${sort}&limit=${limit}&offset=${offset}&meta=total_count`;
+    let query = `fields=id,product_id,serial_number,cylinder_status,cylinder_condition,current_branch_id,current_customer_code,acquisition_date,expiration_date,tare_weight,cost,remarks,created_date,created_by.user_fname,created_by.user_lname&sort=${sort}&limit=${limit}&offset=${offset}&meta=total_count`;
     
     const filters: Record<string, unknown> = {};
 
@@ -23,6 +23,10 @@ export const cylinderAssetsService = {
         { serial_number: { _icontains: params.search } },
         { remarks: { _icontains: params.search } },
       ];
+    }
+    if (params?.serials) {
+      const serialsList = params.serials.split(",");
+      filters.serial_number = { _in: serialsList };
     }
 
     if (Object.keys(filters).length > 0) {

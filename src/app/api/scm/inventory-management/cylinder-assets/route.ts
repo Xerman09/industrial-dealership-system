@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       page: searchParams.get("page") ? Number(searchParams.get("page")) : 1,
       limit: searchParams.get("limit") ? Number(searchParams.get("limit")) : 10,
       sort: searchParams.get("sort") || undefined,
+      serials: searchParams.get("serials") || undefined,
     };
 
     const { data, total } = await cylinderAssetsService.fetchAll(params);
