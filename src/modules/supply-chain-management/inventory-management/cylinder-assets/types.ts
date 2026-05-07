@@ -23,7 +23,10 @@ export interface CylinderAsset {
   tare_weight: number | null;
   cost: number | null;
   remarks: string | null;
-  created_by?: number | null;
+  created_by?: number | null | {
+    user_fname: string;
+    user_lname: string;
+  };
   created_date?: string | null;
   modified_by?: number | null;
   modified_date?: string | null;
